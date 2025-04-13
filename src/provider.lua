@@ -1,11 +1,8 @@
 local provider = {}
+local Client = require('client')
 
--- Store provider state
-local state = {
-    base_url = nil,
-    token = nil,
-    device_id = "lua-provider"
-}
+local inner = qcm.inner
+local client = Client.new(inner:device_id())
 
 --function provider.from_model(custom_data)
 --    local data = json.decode(custom_data)
@@ -21,6 +18,9 @@ local state = {
 --end
 
 function provider.login(auth_info)
+    local Api = require('api.login')
+    local res = client:perform(Api.new("ttt", "mmmm"), 30)
+    error("something went wrong: " .. res.code .. res.text)
 end
 
 function provider.sync()
