@@ -1,6 +1,6 @@
 local M = {}
 
-local ssl = qcm.ssl;
+local ssl = qcm.crypto;
 
 local AES_IV = "0102030405060708"
 local AES_KEY = "0CoJUm6Qyw8W8jud"

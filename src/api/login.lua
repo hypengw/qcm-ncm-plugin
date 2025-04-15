@@ -33,12 +33,8 @@ function Login:body()
 end
 
 function Login:parse_response(response)
-    local status = response:status()
-    local data = response:text()
-    return {
-        code = status,
-        text = data
-    }
+    local data = response:json()
+    return data
 end
 
 return Login

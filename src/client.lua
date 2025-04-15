@@ -1,6 +1,6 @@
 local json = require("json")
 local crypto = require("crypto")
-local http = qcm.http;
+local get_http_client = qcm.get_http_client;
 
 local BASE_URL = "https://music.163.com"
 
@@ -54,7 +54,7 @@ function Client:perform(api, timeout)
     local headers = {
         ["Referer"] = "https://music.163.com",
         ["User-Agent"] =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15"
+        "Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
     }
 
     if api:crypto() == "weapi" then
@@ -64,6 +64,7 @@ function Client:perform(api, timeout)
     end
 
     local response
+    local http = get_http_client()
     if api:operation() == "GET" then
         response = http:get(url):headers(headers):query(api:query()):timeout(timeout):send();
     else

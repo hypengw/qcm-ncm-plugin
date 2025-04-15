@@ -1,6 +1,6 @@
 local M = {}
 
-M.encode = qcm.json_encode;
-M.decode = qcm.json_decode;
+M.encode = qcm.json.encode;
+M.decode = qcm.json.decode;
 
 return M
