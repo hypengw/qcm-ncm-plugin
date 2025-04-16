@@ -1,15 +1,17 @@
 local M = {}
 M.__index = M
 
-function M.new(username, password_md5)
+function M.new(track_id, like, alg, time)
     local self = setmetatable({}, M)
-    self.username = username
-    self.password_md5 = password_md5
+    self.track_id = track_id
+    self.like = like
+    self.alg = alg or "itembased"
+    self.time = time or 3
     return self
 end
 
 function M:path()
-    return "/login"
+    return "/radio/like"
 end
 
 function M:operation()
@@ -17,7 +19,7 @@ function M:operation()
 end
 
 function M:crypto()
-    return "weapi"
+    return "eapi"
 end
 
 function M:query()
@@ -26,9 +28,10 @@ end
 
 function M:body()
     return {
-        username = self.username,
-        password = self.password_md5,
-        rememberLogin = "true"
+        trackId = self.track_id,
+        like = self.like,
+        alg = self.alg,
+        time = self.time
     }
 end
 

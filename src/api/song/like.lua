@@ -1,15 +1,13 @@
 local M = {}
 M.__index = M
 
-function M.new(username, password_md5)
+function M.new()
     local self = setmetatable({}, M)
-    self.username = username
-    self.password_md5 = password_md5
     return self
 end
 
 function M:path()
-    return "/login"
+    return "/song/like"
 end
 
 function M:operation()
@@ -21,14 +19,18 @@ function M:crypto()
 end
 
 function M:query()
-    return {}
+    return {
+    }
 end
 
 function M:body()
     return {
-        username = self.username,
-        password = self.password_md5,
-        rememberLogin = "true"
+        like = true,
+        trackId = 1,
+        userid = 1,
+        userActionMap = {}, -- opt
+        sceneParams = {},   -- opt
+        checkToken = ''
     }
 end
 

@@ -1,15 +1,15 @@
 local M = {}
 M.__index = M
 
-function M.new(username, password_md5)
+function M.new(cat, limit)
     local self = setmetatable({}, M)
-    self.username = username
-    self.password_md5 = password_md5
+    self.cat = cat or "10001"
+    self.limit = limit or 100
     return self
 end
 
 function M:path()
-    return "/login"
+    return "/playlist/category/list"
 end
 
 function M:operation()
@@ -26,15 +26,13 @@ end
 
 function M:body()
     return {
-        username = self.username,
-        password = self.password_md5,
-        rememberLogin = "true"
+        cat = self.cat,
+        limit = self.limit,
     }
 end
 
 function M:parse_response(response)
-    local data = response:json()
-    return data
+    return response:json()
 end
 
 return M

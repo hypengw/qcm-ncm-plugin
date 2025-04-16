@@ -28,8 +28,6 @@ end
 function provider.login(auth_info)
     local m = auth_info.method
     local api
-
-    print("---------------------")
     if m.type == "Email" then
         local Api = require('api.login')
         local pw = ssl.digest("md5", m.pw)
@@ -41,7 +39,6 @@ function provider.login(auth_info)
         error("Unsupported auth method")
     end
     local res = client:perform(api, 30)
-    print(res.code, res.message)
     if res.code == 200 or res.code == 803 then
         return {
             type = "Ok",
@@ -77,7 +74,28 @@ function provider.login(auth_info)
     end
 end
 
-function provider.sync()
+function provider.sync(ctx)
+    --local api = require('api.album_sublist').new()
+    --qcm.debug(client:perform(api, 30))
+    ctx:sync_library({
+        library_id = -1,
+        name = "test",
+        provider_id = -1,
+        native_id = "222",
+    })
+
+    local api = require('api.v1.user.info').new()
+    local rsp = client:perform(api, 30) --[[@as MUserInfoRsp]]
+    qcm.debug(rsp)
+
+
+    local api = require('api.user.setting').new()
+    local rsp = client:perform(api, 30)
+    qcm.debug(rsp)
+
+    local api = require('api.song.like').new()
+    local rsp = client:perform(api, 30)
+    qcm.debug(rsp)
 end
 
 function provider.image(item_id, image_type)

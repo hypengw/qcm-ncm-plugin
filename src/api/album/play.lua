@@ -1,15 +1,14 @@
 local M = {}
 M.__index = M
 
-function M.new(username, password_md5)
+function M.new(id)
     local self = setmetatable({}, M)
-    self.username = username
-    self.password_md5 = password_md5
+    self.id = id
     return self
 end
 
 function M:path()
-    return "/login"
+    return "/album/play"
 end
 
 function M:operation()
@@ -21,20 +20,18 @@ function M:crypto()
 end
 
 function M:query()
-    return {}
+    return {
+        id = self.id
+    }
 end
 
 function M:body()
     return {
-        username = self.username,
-        password = self.password_md5,
-        rememberLogin = "true"
     }
 end
 
 function M:parse_response(response)
-    local data = response:json()
-    return data
+    return response:json()
 end
 
 return M

@@ -1,15 +1,13 @@
 local M = {}
 M.__index = M
 
-function M.new(username, password_md5)
+function M.new()
     local self = setmetatable({}, M)
-    self.username = username
-    self.password_md5 = password_md5
     return self
 end
 
 function M:path()
-    return "/login"
+    return "/usersafe/loginprotect/text/get"
 end
 
 function M:operation()
@@ -25,11 +23,7 @@ function M:query()
 end
 
 function M:body()
-    return {
-        username = self.username,
-        password = self.password_md5,
-        rememberLogin = "true"
-    }
+    return {}
 end
 
 function M:parse_response(response)

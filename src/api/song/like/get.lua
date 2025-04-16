@@ -1,15 +1,14 @@
 local M = {}
 M.__index = M
 
-function M.new(username, password_md5)
+function M.new(id)
     local self = setmetatable({}, M)
-    self.username = username
-    self.password_md5 = password_md5
+    self.uid = id
     return self
 end
 
 function M:path()
-    return "/login"
+    return "/song/like/get"
 end
 
 function M:operation()
@@ -26,9 +25,7 @@ end
 
 function M:body()
     return {
-        username = self.username,
-        password = self.password_md5,
-        rememberLogin = "true"
+        uid = self.uid
     }
 end
 

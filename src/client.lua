@@ -48,17 +48,25 @@ function Client.new(device_id)
     return self
 end
 
+---@class Api
+---@field operation fun(): string
+---@field crypto fun(): string
+---@field query fun(): table
+---@field body fun(): table
+---@field parse_response fun(Api, any): any
+
+---@param api Api
 function Client:perform(api, timeout)
     local base_url = self:get_base()
     local url = self:format_url(base_url, api)
     local headers = {
         ["Referer"] = "https://music.163.com",
         ["User-Agent"] =
-        "Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15"
     }
 
     if api:crypto() == "weapi" then
-        headers["Cookie"] = self.web_params_cookie
+        headers["Cookie"] = self.web_params_cookie;
     elseif api:crypto() == "eapi" then
         headers["Cookie"] = self.device_params_cookie
     end
