@@ -7,7 +7,7 @@ function M.new()
 end
 
 function M:path()
-    return "/resource-exposure/config"
+    return "/resource-exposure/activity/config/get"
 end
 
 function M:operation()

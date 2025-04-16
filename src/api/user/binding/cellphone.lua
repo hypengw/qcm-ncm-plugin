@@ -7,7 +7,7 @@ function M.new()
 end
 
 function M:path()
-    return "/resource-exposure/config"
+    return "/user/binding/cellphone"
 end
 
 function M:operation()

@@ -26,6 +26,14 @@ function M:body()
     return {}
 end
 
+--[[
+{
+  "code": 200,
+  "data": "登录保护",
+  "message": "SUCCESS"
+}
+]]
+
 function M:parse_response(response)
     local data = response:json()
     return data

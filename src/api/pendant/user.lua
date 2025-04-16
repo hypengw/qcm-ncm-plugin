@@ -1,13 +1,15 @@
 local M = {}
 M.__index = M
 
+-- 会员挂件
+
 function M.new()
     local self = setmetatable({}, M)
     return self
 end
 
 function M:path()
-    return "/resource-exposure/config"
+    return "/pendant/user/get"
 end
 
 function M:operation()

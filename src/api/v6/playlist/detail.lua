@@ -7,7 +7,7 @@ function M.new()
 end
 
 function M:path()
-    return "/resource-exposure/config"
+    return "/v6/playlist/detail"
 end
 
 function M:operation()

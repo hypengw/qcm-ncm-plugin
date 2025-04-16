@@ -1,15 +1,26 @@
 local provider = {}
 local Client = require('client')
+local json = require('json')
 
 local inner = qcm.inner
 local ssl = qcm.crypto
 local client = Client.new(inner:device_id())
 
+local status = {
+    user_id = -1,
+    nickname = '',
+    avatar_url = ''
+}
+
 function provider.save()
-    return ""
+    return json.encode(status)
 end
 
 function provider.load(data)
+    local s = json.decode(data)
+    status.user_id = s.user_id
+    status.nickname = s.nickname
+    status.avatar_url = s.avatar_url
 end
 
 function provider.check()
@@ -40,6 +51,12 @@ function provider.login(auth_info)
     end
     local res = client:perform(api, 30)
     if res.code == 200 or res.code == 803 then
+        local api         = require('api.v1.user.detail').new()
+        local rsp         = client:perform(api, 30) --[[@as UserDetailResponse]]
+        status.user_id    = rsp.profile.userId
+        status.nickname   = rsp.profile.nickname
+        status.avatar_url = rsp.profile.avatarUrl
+
         return {
             type = "Ok",
         }
@@ -77,23 +94,30 @@ end
 function provider.sync(ctx)
     --local api = require('api.album_sublist').new()
     --qcm.debug(client:perform(api, 30))
-    ctx:sync_library({
-        library_id = -1,
-        name = "test",
-        provider_id = -1,
-        native_id = "222",
-    })
-
     local api = require('api.v1.user.info').new()
     local rsp = client:perform(api, 30) --[[@as MUserInfoRsp]]
-    qcm.debug(rsp)
 
+    ctx:sync_library({ {
+        library_id = -1,
+        name = "",
+        provider_id = inner.id,
+        native_id = tostring(rsp.userPoint.userId),
+    }, {
+        library_id = -1,
+        name = "netease external",
+        provider_id = inner.id,
+        native_id = "external",
+    } })
 
     local api = require('api.user.setting').new()
     local rsp = client:perform(api, 30)
     qcm.debug(rsp)
 
-    local api = require('api.song.like').new()
+    local api = require('api.pendant.user').new()
+    local rsp = client:perform(api, 30)
+    qcm.debug(rsp)
+
+    local api = require('api.user.iplay.info').new()
     local rsp = client:perform(api, 30)
     qcm.debug(rsp)
 end

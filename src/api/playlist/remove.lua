@@ -1,13 +1,14 @@
 local M = {}
 M.__index = M
 
-function M.new()
+function M.new(ids)
     local self = setmetatable({}, M)
+    self.ids = ids
     return self
 end
 
 function M:path()
-    return "/resource-exposure/config"
+    return "/playlist/remove"
 end
 
 function M:operation()
@@ -23,7 +24,9 @@ function M:query()
 end
 
 function M:body()
-    return {}
+    return {
+        ids = string.format("[%s]", table.concat(self.ids, ","))
+    }
 end
 
 function M:parse_response(response)

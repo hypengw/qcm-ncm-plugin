@@ -7,7 +7,7 @@ function M.new()
 end
 
 function M:path()
-    return "/resource-exposure/config"
+    return "/user/iplay/info/get"
 end
 
 function M:operation()
