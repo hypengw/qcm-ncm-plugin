@@ -6,12 +6,8 @@ function M.new()
     return self
 end
 
---[[
-ydDeviceToken: "NT9Wq/rxZ4JBEgRRBVPDOSASJ7TwF2pV"
-ydDeviceType: "WebOnline"
-]]
 function M:path()
-    return "/middle/device-info/web/get"
+    return "/middle/device-info/get"
 end
 
 function M:operation()
@@ -23,7 +19,10 @@ function M:crypto()
 end
 
 function M:query()
-    return {}
+    return {
+        ydDeviceType = 'Android',
+        ydDeviceToken = ''
+    }
 end
 
 function M:body()

@@ -113,11 +113,11 @@ function provider.sync(ctx)
     local rsp = client:perform(api, 30)
     qcm.debug(rsp)
 
-    local api = require('api.pendant.user').new()
+    local api = require('api.cdns').new()
     local rsp = client:perform(api, 30)
     qcm.debug(rsp)
 
-    local api = require('api.user.iplay.info').new()
+    local api = require('api.middle.device-info.web').new()
     local rsp = client:perform(api, 30)
     qcm.debug(rsp)
 end

@@ -1,17 +1,14 @@
 local M = {}
 M.__index = M
 
-function M.new()
+function M.new(ids)
     local self = setmetatable({}, M)
+    self.ids = ids
     return self
 end
 
---[[
-ydDeviceToken: "NT9Wq/rxZ4JBEgRRBVPDOSASJ7TwF2pV"
-ydDeviceType: "WebOnline"
-]]
 function M:path()
-    return "/middle/device-info/web/get"
+    return "/v3/song/detail"
 end
 
 function M:operation()
@@ -27,12 +24,15 @@ function M:query()
 end
 
 function M:body()
-    return {}
+    local t = {}
+    for _, id in ipairs(self.ids) do
+        table.insert(t, { id = id, v = '0' })
+    end
+    return t
 end
 
 function M:parse_response(response)
-    local data = response:json()
-    return data
+    return response:json()
 end
 
 return M
