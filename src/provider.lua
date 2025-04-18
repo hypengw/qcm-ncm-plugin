@@ -98,6 +98,81 @@ function provider.login(auth_info)
     end
 end
 
+---@param library_id integer
+local function sync_albums(ctx, library_id)
+    local api = require('api.album.sublist').new()
+
+
+    local songs = {}
+    while true do
+        local rsp = client:perform(api, 30) --[[@as AlbumSublistRsp]]
+
+        local len = #rsp.data and rsp.data or 0
+        if len == 0 then
+            break
+        end
+
+
+        local items = {}
+        local next = function()
+            local item = table.remove(rsp.data, 1)
+            if item == nil then
+                return nil
+            end
+
+            local api = require('api.album.v3.detail').new(item.id)
+            return api
+        end
+        local rsps = client:perform_queue(next, 30) --[[@as table<AlbumDetailRsp>]]
+        for _, rsp in ipairs(rsps) do
+            local a = rsp.album
+            for i = 1, #rsp.songs do
+                rsp.songs[i].track_number = i
+            end
+            table.move(rsp.songs, 1, #rsp.songs, #songs + 1, songs)
+            table.insert(items, {
+                id           = -1,
+                native_id    = tostring(a.id),
+                library_id   = library_id,
+                name         = a.name or '',
+                publish_time = format_time(a.publishTime),
+                track_count  = a.size,
+                description  = a.description or '',
+                company      = a.company or ''
+            })
+        end
+        ctx:sync_albums(items)
+        ctx:commit_album(#items)
+
+        if not rsp.hasMore or api.offset > 1e6 then
+            break
+        end
+        api.offset = api.offset + api.limit
+    end
+
+    local models = {}
+    for _, value in ipairs(songs) do
+        local song = value --[[@as Song]]
+        local item = {
+            id = -1,
+            library_id = library_id,
+            name = song.name,
+            native_id = tostring(song.id),
+            album_id = nil,
+            track_number = song.track_number,
+            disc_number = 1,
+            duration = song.dt,
+        }
+        table.insert(models, item)
+    end
+    ctx:sync_songs(models)
+    models = {}
+    for _, song in ipairs(songs) do
+        table.insert(models, { tostring(song.id), tostring(song.al.id) })
+    end
+    ctx:sync_song_album_ids(library_id, models)
+end
+
 function provider.sync(ctx)
     --local api = require('api.album_sublist').new()
     --qcm.debug(client:perform(api, 30))
@@ -121,48 +196,7 @@ function provider.sync(ctx)
     end
 
     local library_id = ids[1]
-
-    local api = require('api.album.sublist').new()
-    while true do
-        local rsp = client:perform(api, 30) --[[@as AlbumSublistRsp]]
-
-        local len = #rsp.data and rsp.data or 0
-        if len == 0 then
-            break
-        end
-
-
-        local items = {}
-        local next = function()
-            local item = table.remove(rsp.data, 1)
-            if item == nil then
-                return nil
-            end
-
-            local api = require('api.album.v3.detail').new(item.id)
-            return api
-        end
-        local rsps = client:perform_queue(next, 30) --[[@as table<AlbumDetailRsp>]]
-        for _, rsp in ipairs(rsps) do
-            local a = rsp.album
-            table.insert(items, {
-                id           = -1,
-                native_id    = tostring(a.id),
-                library_id   = library_id,
-                name         = a.name or '',
-                publish_time = format_time(a.publishTime),
-                track_count  = a.size,
-                description  = a.description or '',
-                company      = a.company or ''
-            })
-        end
-        ctx:sync_albums(items)
-
-        if not rsp.hasMore or api.offset > 1e6 then
-            break
-        end
-        api.offset = api.offset + api.limit
-    end
+    sync_albums(ctx, library_id)
 end
 
 function provider.image(item_id, image_type)

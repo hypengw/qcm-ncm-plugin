@@ -6,6 +6,7 @@
 ---@field album Album Album details
 
 ---@class Song
+---@field track_number integer | nil
 ---@field resourceState boolean Resource state
 ---@field mark number Song mark
 ---@field al Album Album information
