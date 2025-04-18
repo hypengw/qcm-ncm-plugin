@@ -241,7 +241,7 @@ function provider.image(item_id, pic_id, pic_type)
     return rsp
 end
 
-function provider.audio(item_id)
+function provider.audio(item_id, headers)
     local api = require('api.song.enhance.player.url.v1').new(item_id)
     local rsp = client:perform(api, 30) --[[@as SongPlayerUrlResponse]]
 
@@ -250,7 +250,10 @@ function provider.audio(item_id)
     end
     local url = rsp.data[1].url
     local client = get_http_client()
-    return client:get(url):send()
+    if headers == nil then
+        headers = {}
+    end
+    return client:get(url):headers(headers):send()
 end
 
 return provider
