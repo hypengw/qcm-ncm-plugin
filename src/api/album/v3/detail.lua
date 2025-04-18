@@ -20,6 +20,8 @@
 ---@field m SongQuality? Medium quality information
 ---@field l SongQuality? Low quality information
 ---@field hr SongQuality? Hi-Res quality information
+---@field publishTime number? Publish timestamp
+---@field pop number? popularity
 
 ---@class SongQuality
 ---@field fid number File ID
@@ -46,6 +48,7 @@
 ---@field id number Album ID
 ---@field type string Album type
 ---@field picUrl string Album cover URL
+---@field picId_str string Album cover id str
 ---@field company string Record company
 ---@field publishTime number Publish timestamp
 ---@field description string Album description
@@ -81,7 +84,7 @@ function M:query()
 end
 
 function M:body()
-    local key = crypto.cacheKey({
+    local key = crypto.cache_key({
         id = self.id,
         e_r = self.e_r,
     });

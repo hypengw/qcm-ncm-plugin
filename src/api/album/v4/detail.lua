@@ -30,7 +30,7 @@ end
 function M:body()
     return {
         id = self.id,
-        cache_key = crypto.cacheKey({
+        cache_key = crypto.cache_key({
             id = self.id,
             e_r = self.e_r,
         }),

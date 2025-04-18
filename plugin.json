@@ -1,5 +1,5 @@
 {
-    "name": "Netease",
+    "name": "netease",
     "script_path": "src/provider.lua",
     "svg_path": "assets/netease.svg",
     "has_server_url": false,
