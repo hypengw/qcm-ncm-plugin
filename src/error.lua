@@ -1,4 +1,5 @@
-   
+local json = require("json")
+
 --[[
             if (var11 == 506) {
                return -8;
@@ -98,3 +99,50 @@ java:
             var2 = null;
       }
 ]]
+
+--[[
+
+   private static boolean X0(int var0) {
+      boolean var1;
+      if (var0 != -601 && var0 != -472 && var0 != -470 && var0 != -457 && var0 != -455 && var0 != -461 && var0 != -460) {
+         switch (var0) {
+            case -449:
+            case -448:
+            case -447:
+            case -446:
+            case -445:
+            case -444:
+            case -443:
+            case -442:
+               break;
+            default:
+               var1 = false;
+               return var1;
+         }
+      }
+
+      var1 = true;
+      return var1;
+   }
+]]
+
+local M = {}
+
+function M.check(rsp)
+   if rsp.code == nil then
+      error("Unexpected response: " .. json.encode(rsp))
+   elseif rsp.code == 200 then
+      return;
+   end
+
+   local message = ''
+   if rsp.message ~= nil then
+      message = rsp.message
+   elseif rsp.data ~= nil then
+      message = rsp.data
+   end
+
+   error("Error: " .. rsp.code .. " " .. message)
+end
+
+return M

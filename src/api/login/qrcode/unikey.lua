@@ -3,6 +3,7 @@ QrcodeUnikey.__index = QrcodeUnikey
 
 function QrcodeUnikey.new()
     local self = setmetatable({}, QrcodeUnikey)
+    self.no_error_check = true
     return self
 end
 

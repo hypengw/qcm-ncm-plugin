@@ -75,7 +75,12 @@ end
 function M.cacheKey(params)
     local text = buildQuery(params)
     local key = ')(13daqP@ssw0rd~'
-    return ssl.encode(ssl.encrypt('aes-128-ecb', key, '', text))
+    return ssl.encode_block(ssl.encrypt('aes-128-ecb', key, '', text))
 end
+
+assert('5bLXRrbJWcwCFwNRHdA7MrRspVsq5SeyqPe/cDJQWIY=' == M.cacheKey({
+    id = 53320,
+    e_r = true
+}))
 
 return M

@@ -4,6 +4,7 @@ QrcodeLogin.__index = QrcodeLogin
 function QrcodeLogin.new(key)
     local self = setmetatable({}, QrcodeLogin)
     self.key = key
+    self.no_error_check = true
     return self
 end
 

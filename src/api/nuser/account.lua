@@ -42,11 +42,11 @@ end
 ---@field defaultAvatar boolean
 ---@field vipType number
 
----@class MRsp
+---@class NuserAccountRsp
 ---@field code number
 ---@field profile MProfile?
 
----@return MRsp
+---@return NuserAccountRsp
 function M:parse_response(response)
     return response:json()
 end

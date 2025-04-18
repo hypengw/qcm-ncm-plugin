@@ -1,8 +1,17 @@
 local json = require("json")
 local crypto = require("crypto")
+local error = require("error")
 local get_http_client = qcm.get_http_client;
 
 local BASE_URL = "https://music.163.com"
+
+---@class Api
+---@field no_error_check? boolean
+---@field operation fun(): string
+---@field crypto fun(): string
+---@field query fun(): table
+---@field body fun(): table
+---@field parse_response fun(Api, any): any
 
 local function formatCookie(table)
     local cookie = ''
@@ -48,15 +57,8 @@ function Client.new(device_id)
     return self
 end
 
----@class Api
----@field operation fun(): string
----@field crypto fun(): string
----@field query fun(): table
----@field body fun(): table
----@field parse_response fun(Api, any): any
-
 ---@param api Api
-function Client:perform(api, timeout)
+function Client:_req_build(api, timeout)
     local base_url = self:get_base()
     local url = self:format_url(base_url, api)
     local headers = {
@@ -71,16 +73,56 @@ function Client:perform(api, timeout)
         headers["Cookie"] = self.device_params_cookie
     end
 
-    local response
+    local builder
     local http = get_http_client()
     if api:operation() == "GET" then
-        response = http:get(url):headers(headers):query(api:query()):timeout(timeout):send();
+        builder = http:get(url):headers(headers):query(api:query()):timeout(timeout);
     else
         local body = self:prepare_body(api)
-        response = http:post(url):headers(headers):query(api:query()):timeout(timeout):form(body):send();
+        builder = http:post(url):headers(headers):query(api:query()):timeout(timeout):form(body);
     end
+    return builder
+end
 
-    return api:parse_response(response)
+---@param api Api
+---@param timeout integer | nil
+function Client:perform(api, timeout)
+    local response = self:_req_build(api, timeout):send()
+    local rsp = api:parse_response(response)
+    if not api.no_error_check then
+        error.check(rsp)
+    end
+    return rsp
+end
+
+---@param next fun(): Api
+---@param timeout integer | nil
+function Client:perform_queue(next, timeout)
+    local batch = get_http_client():new_batch()
+    local results = {}
+    while true do
+        local rsp = batch:wait_one()
+        if rsp == nil then
+            local ok = true
+            for i = 1, 5 do
+                local api = next()
+                if not api then
+                    ok = false
+                    break
+                end
+                local builder = self:_req_build(api, timeout)
+                batch:add(builder)
+            end
+            if not ok then
+                break
+            end
+        else
+            rsp = json.decode(rsp)
+            error.check(rsp)
+            table.insert(results, rsp)
+        end
+    end
+    return results
 end
 
 function Client:get_base()
