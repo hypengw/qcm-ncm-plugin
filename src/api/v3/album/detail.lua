@@ -6,6 +6,11 @@
 ---@field album Album Album details
 
 ---@class Song
+---@field st number Status
+---@field rt string
+---@field mst number
+---@field s_id number
+---@field fee number Fee type
 ---@field track_number integer | nil
 ---@field resourceState boolean Resource state
 ---@field mark number Song mark
@@ -22,6 +27,20 @@
 ---@field hr SongQuality? Hi-Res quality information
 ---@field publishTime number? Publish timestamp
 ---@field pop number? popularity
+---@field version number Version number
+---@field ftype number File type
+---@field single number
+---@field no number Track number
+---@field cp number Copyright
+---@field pst number
+---@field cd string CD/Disc number
+---@field v number Version
+---@field cf string
+---@field djId number DJ ID
+---@field tns string[]? Translated names
+---@field originCoverType number
+---@field alia string[] Aliases
+
 
 ---@class SongQuality
 ---@field fid number File ID
@@ -43,16 +62,32 @@
 ---@field commentCount number Comment count
 ---@field likedCount number Like count
 
+
+---@class AlbumArtist
+---@field name string Artist name
+---@field albumSize integer Number of albums
+---@field id integer Artist ID
+---@field alias string[] Alias names
+---@field briefDesc string Artist description
+---@field trans string[]
+---@field musicSize integer
+---@field imge1v1Url string
+---@field picId integer
+---@field picUrl string
+
 ---@class Album
 ---@field name string Album name
 ---@field id number Album ID
 ---@field type string Album type
 ---@field picUrl string Album cover URL
 ---@field picId_str string Album cover id str
+---@field picId integer
+---@field pic integer
 ---@field company string Record company
 ---@field publishTime number Publish timestamp
 ---@field description string Album description
 ---@field size number Number of tracks
+---@field artists AlbumArtist
 
 local M = {}
 M.__index = M
@@ -76,7 +111,7 @@ function M:operation()
 end
 
 function M:crypto()
-    return "weapi"
+    return "eapi"
 end
 
 function M:query()

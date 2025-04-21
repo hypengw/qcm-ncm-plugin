@@ -119,8 +119,12 @@ function Client:perform_queue(next, timeout)
             end
         else
             rsp = json.decode(rsp)
-            error.check(rsp)
-            table.insert(results, rsp)
+            -- error.check(rsp)
+            if rsp.code ~= 200 then
+                print('warn: ' .. rsp.code .. ' ' .. rsp.message)
+            else
+                table.insert(results, rsp)
+            end
         end
     end
     return results
