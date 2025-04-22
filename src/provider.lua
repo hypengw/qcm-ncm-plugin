@@ -367,7 +367,7 @@ function provider.image(item_id, pic_id, pic_type)
         return nil
     end
     local client = get_http_client()
-    local url = string.format("https://p1.music.126.net/%s/%s.jpg", crypto.encrypt_id(pic_id), pic_id)
+    local url = string.format("https://p1.music.126.net/%s/%s.jpg?param=400x400", crypto.encrypt_id(pic_id), pic_id)
     local rsp = client:get(url):send()
     return rsp
 end
