@@ -71,8 +71,8 @@ function provider.login(auth_info)
     end
     local res = client:perform(api, 30)
     if res.code == 200 or res.code == 803 then
-        local api         = require('api.v1.user.detail').new()
-        local rsp         = client:perform(api, 30) --[[@as UserDetailResponse]]
+        local api         = require('api.nuser.account').new()
+        local rsp         = client:perform(api, 30) --[[@as NuserAccountRsp]]
         status.user_id    = rsp.profile.userId
         status.nickname   = rsp.profile.nickname
         status.avatar_url = rsp.profile.avatarUrl
@@ -339,6 +339,8 @@ end
 function provider.sync(ctx)
     local api = require('api.nuser.account').new()
     local rsp = client:perform(api, 30) --[[@as NuserAccountRsp]]
+
+    qcm.debug(rsp)
 
     local ids = ctx:sync_libraries({ {
         library_id = -1,
