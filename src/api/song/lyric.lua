@@ -19,8 +19,9 @@ M.__index = M
 ---@field tlyric SongLyricItem?
 ---@field romalrc SongLyricItem?
 
-function M.new()
+function M.new(id)
     local self = setmetatable({}, M)
+    self.id = id
     return self
 end
 

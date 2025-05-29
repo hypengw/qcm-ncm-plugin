@@ -392,4 +392,14 @@ function provider.audio(item_id, headers)
     return client:get(url):headers(headers):send()
 end
 
+function provider.subtitle(item_id)
+    local api = require('api.song.lyric').new(item_id)
+    local rsp = client:perform(api, 30) --[[@as SongLyricResponse]]
+
+    if rsp.lrc == nil or rsp.lrc.lyric == nil then
+        return nil
+    end
+    return rsp.lrc.lyric
+end
+
 return provider
