@@ -13,6 +13,7 @@ local BASE_URL = 'https://music.163.com'
 ---@field crypto fun(): string
 ---@field query fun(): table
 ---@field body fun(): table
+---@field path fun(): string
 ---@field parse_response fun(Api, any): any
 
 local function formatCookie(table)
@@ -24,6 +25,19 @@ local function formatCookie(table)
     return cookie
 end
 
+---@class Client
+---@field device_id string Device ID for authentication
+---@field web_params table Web request parameters
+---@field device_params table Device-specific parameters
+---@field web_params_cookie string Formatted web parameters as cookie string
+---@field device_params_cookie string Formatted device parameters as cookie string
+---@field new fun(device_id: string): Client Create a new client instance
+---@field perform fun(self: Client, api: Api, timeout?: integer): any Execute a single API request
+---@field perform_queue fun(self: Client, next: fun(): Api, timeout?: integer): table[] Execute multiple API requests in batch
+---@field get_base fun(self: Client): string Get base URL for requests
+---@field prepare_body fun(self: Client, api: Api): table|string Prepare request body with encryption
+---@field format_url fun(self: Client, base_url: string, api: Api): string Format complete request URL
+---@field encrypt fun(self: Client, path: string, data: table|string, crypto_type: string): table|string Encrypt request data
 local Client = {}
 Client.__index = Client
 
@@ -86,8 +100,6 @@ function Client:_req_build(api, timeout)
     return builder
 end
 
----@param api Api
----@param timeout integer | nil
 function Client:perform(api, timeout)
     local response = self:_req_build(api, timeout):send()
     local rsp = api:parse_response(response)
@@ -97,8 +109,6 @@ function Client:perform(api, timeout)
     return rsp
 end
 
----@param next fun(): Api
----@param timeout integer | nil
 function Client:perform_queue(next, timeout)
     local batch = get_http_client():new_batch()
     local results = {}

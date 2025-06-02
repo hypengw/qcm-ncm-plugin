@@ -15,7 +15,7 @@
 ---@field send fun(self: QcmRequestBuilder): QcmResponse
 
 ---@class HttpClientBatch
----@field wait_one fun(self: HttpClientBatch): QcmResponse
+---@field wait_one fun(self: HttpClientBatch): string
 ---@field add fun(self: HttpClientBatch, req: QcmRequestBuilder): QcmResponse
 
 ---@class HttpClient
@@ -24,17 +24,18 @@
 ---@field new_batch fun(self: HttpClient): HttpClientBatch
 
 ---@class QcmSyncContext
----@field commit_album fun(count: integer)
----@field commit_artist fun(count: integer)
----@field commit_song fun(count: integer)
----@field sync_libraries fun(models: LibraryModel[]): integer[]
----@field sync_albums fun(models: AlbumModel[]): integer[]
----@field sync_artists fun(models: ArtistModel[]): integer[]
----@field sync_songs fun(models: SongModel[]): integer[]
----@field sync_images fun(models: ImageModel[])
----@field sync_song_album_ids fun(library_id: integer, ids: string[][])
----@field sync_album_artist_ids fun(models: AlbumModel[])
----@field sync_song_artist_ids fun(models: ArtistModel[])
+---@field commit_album fun(self: QcmSyncContext, count: integer)
+---@field commit_artist fun(self: QcmSyncContext, count: integer)
+---@field commit_song fun(self: QcmSyncContext, count: integer)
+---@field sync_libraries fun(self: QcmSyncContext, models: QcmLibraryModel[]): integer[]
+---@field sync_albums fun(self: QcmSyncContext, models: QcmAlbumModel[]): integer[]
+---@field sync_artists fun(self: QcmSyncContext, models: QcmArtistModel[]): integer[]
+---@field sync_songs fun(self: QcmSyncContext, models: QcmSongModel[]): integer[]
+---@field sync_images fun(self: QcmSyncContext, models: QcmImageModel[])
+---@field sync_dynamics fun(self: QcmSyncContext, models: QcmDynamicModel[])
+---@field sync_song_album_ids fun(self: QcmSyncContext, library_id: integer, ids: string[][])
+---@field sync_album_artist_ids fun(self: QcmSyncContext, models: QcmAlbumModel[])
+---@field sync_song_artist_ids fun(self: QcmSyncContext, models: QcmArtistModel[])
 
 ---@class QcmHex
 ---@field encode_low fun(data: string): string

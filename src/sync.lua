@@ -55,7 +55,10 @@ local function check_artists_collect(t, native_id)
     return ar
 end
 
+---@param client Client
+---@param ctx QcmSyncContext
 ---@param library_id integer
+---@param artists_collect [ArtistCollect]
 function M.sync_sub_albums(client, ctx, library_id, artists_collect)
     local detail_api_t = require('api.v3.album.detail')
     local api = require('api.album.sublist').new()
@@ -81,7 +84,9 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
             return api
         end
 
+        ---@type QcmImageModel[]
         local images = {}
+        ---@type QcmDynamicModel[]
         local dynamics = {}
         local rsps = client:perform_queue(next, 30) --[[@as table<AlbumDetailRsp>]]
         for _, rsp in ipairs(rsps) do
@@ -98,7 +103,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
                 track_count  = a.size,
                 description  = a.description or '',
                 company      = a.company or ''
-            })
+            } --[[@as QcmAlbumModel]])
             table.insert(images, {
                 id         = -1,
                 item_id    = -1,
@@ -106,15 +111,15 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
                 native_id  = a.picId_str or (a.picId and tostring(a.picId) or (a.pic and tostring(a.pic) or a.pic)),
                 image_type = 'Primary',
                 item_type  = 'Album',
-            })
+            } --[[@as QcmImageModel]])
             table.insert(dynamics, {
-                id         = -1,
-                item_id    = -1,
-                library_id = library_id,
-                native_id  = a.picId_str or (a.picId and tostring(a.picId) or (a.pic and tostring(a.pic) or a.pic)),
-                image_type = 'Primary',
-                item_type  = 'Album',
-            })
+                id          = -1,
+                item_id     = -1,
+                item_type   = 'Album',
+                library_id  = library_id,
+                is_external = false,
+                is_favorite = true,
+            } --[[@as QcmDynamicModel]])
         end
         local ids = ctx:sync_albums(items)
 
@@ -122,6 +127,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
             local album = rsps[i].album --[[@as Album]]
             album_id_map[album.id] = ids[i]
             images[i].item_id = ids[i]
+            dynamics[i].item_id = ids[i]
             for _, v in ipairs(album.artists) do
                 local artist = v --[[@as ArtistSublistItem]]
                 if artist.id ~= 0 and artist.id ~= nil then
@@ -133,7 +139,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
         ctx:sync_images(table.filter(images, function(v)
             return v.native_id ~= nil
         end))
-
+        ctx:sync_dynamics(dynamics)
 
         if not rsp.hasMore or api.offset > 1e6 then
             break
@@ -141,9 +147,12 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
         api.offset = api.offset + api.limit
     end
 
+    ---@type QcmDynamicModel[]
+    local dynamics = {}
     local models = {}
     for _, value in ipairs(songs) do
         local song = value --[[@as Song]]
+        ---@type QcmSongModel
         local item = {
             id = -1,
             library_id = library_id,
@@ -157,6 +166,14 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
             duration = song.dt * 1000,
         }
         table.insert(models, item)
+        table.insert(dynamics, {
+            id = -1,
+            item_id = -1,
+            item_type = 'Song',
+            library_id = library_id,
+            is_external = false,
+            is_favorite = false,
+        } --[[@as QcmDynamicModel]])
     end
     local ids = ctx:sync_songs(models)
     models = {}
@@ -165,6 +182,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
     end
     for i = 1, #ids do
         local song = songs[i] --[[@as Song]]
+        dynamics[i].item_id = ids[i]
         for _, v in ipairs(song.ar) do
             local artist = v --[[@as AlbumDetailArtist]]
             if artist.id ~= nil and artist.id > 0 then
@@ -174,11 +192,14 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
         end
     end
 
+    ctx:sync_dynamics(dynamics)
     ctx:sync_song_album_ids(library_id, models)
 end
 
-
-
+---@param client Client
+---@param ctx QcmSyncContext
+---@param artist_collect [ArtistCollect]
+---@param library_id integer
 function M.sync_artists(client, ctx, artist_collect, library_id)
     local artist_api_t = require('api.artist.head.info.get')
 
@@ -194,6 +215,7 @@ function M.sync_artists(client, ctx, artist_collect, library_id)
         return api
     end
 
+    ---@type QcmImageModel[]
     local images = {}
     local models = {}
     local rsps = client:perform_queue(next_, 30) --[[@as table<ArtistHeadResponse>]]
@@ -206,7 +228,7 @@ function M.sync_artists(client, ctx, artist_collect, library_id)
             native_id   = tostring(item.id),
             description = item.briefDesc or '',
             _native_id  = item.id
-        })
+        } --[[@as QcmArtistModel]])
         table.insert(images, {
             id         = -1,
             item_id    = -1,
@@ -214,7 +236,7 @@ function M.sync_artists(client, ctx, artist_collect, library_id)
             native_id  = item.avatar ~= nil and util.extract_image_id(item.avatar) or nil,
             image_type = 'Primary',
             item_type  = 'Artist',
-        })
+        } --[[@as QcmImageModel]])
     end
     local ids = ctx:sync_artists(models)
     for i = 1, #ids do

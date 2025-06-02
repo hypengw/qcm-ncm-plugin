@@ -1,23 +1,65 @@
----@class AlbumModel
+---@class QcmAlbumModel
 ---@field id integer
 ---@field native_id string
 ---@field library_id integer
 ---@field name string
 ---@field sort_name string?
----@field publish_time string
----@field added_time string
+---@field publish_time string|osdate
+---@field added_time string?
 ---@field track_count integer
 ---@field description string
 ---@field company string
----@field edit_time string
+---@field edit_time string|osdate?
 
----@class ArtistModel
+---@class QcmArtistModel
 ---@field id integer
 ---@field native_id string
 ---@field name string
 ---@field sort_name string?
 ---@field library_id integer
 ---@field description string
----@field album_count integer
----@field music_count integer
----@field edit_time string
+---@field album_count integer?
+---@field music_count integer?
+---@field edit_time string|osdate?
+
+---@class QcmImageModel
+---@field id integer
+---@field item_id integer
+---@field item_type string | integer
+---@field image_type string | integer
+---@field library_id integer
+---@field native_id string?
+---@field db string?
+---@field fresh string?
+---@field timestamp string?
+
+---@class QcmSongModel
+---@field id integer
+---@field library_id integer
+---@field name string
+---@field sort_name string?
+---@field native_id string
+---@field album_id integer?
+---@field track_number integer
+---@field disc_number integer
+---@field duration integer Duration in milliseconds
+---@field can_play boolean?
+---@field popularity number
+---@field publish_time string|osdate
+---@field tags table?
+---@field edit_time string|osdate?
+
+---@class QcmLibraryModel
+---@field id integer
+---@field library_id integer
+---@field provider_id integer
+---@field native_id string
+
+
+---@class QcmDynamicModel
+---@field id integer
+---@field library_id integer
+---@field item_id integer
+---@field item_type string|integer
+---@field is_favorite boolean
+---@field is_external  boolean
