@@ -1,5 +1,6 @@
 local M = {}
 
+local qcm = require("qcm.mod")
 local ssl = qcm.crypto;
 
 local AES_IV = '0102030405060708'

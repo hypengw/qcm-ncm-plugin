@@ -1,0 +1,23 @@
+---@class AlbumModel
+---@field id integer
+---@field native_id string
+---@field library_id integer
+---@field name string
+---@field sort_name string?
+---@field publish_time string
+---@field added_time string
+---@field track_count integer
+---@field description string
+---@field company string
+---@field edit_time string
+
+---@class ArtistModel
+---@field id integer
+---@field native_id string
+---@field name string
+---@field sort_name string?
+---@field library_id integer
+---@field description string
+---@field album_count integer
+---@field music_count integer
+---@field edit_time string

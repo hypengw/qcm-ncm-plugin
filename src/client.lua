@@ -1,6 +1,7 @@
 local json = require('json')
 local crypto = require('crypto')
 local error = require('error')
+local qcm = require('qcm.mod')
 local get_http_client = qcm.get_http_client;
 
 local BASE_URL = 'https://music.163.com'

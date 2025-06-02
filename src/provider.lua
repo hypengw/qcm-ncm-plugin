@@ -3,6 +3,7 @@ local Client = require('client')
 local json = require('json')
 local crypto = require('crypto')
 
+local qcm = require('qcm.mod')
 local inner = qcm.inner
 local ssl = qcm.crypto
 local get_http_client = qcm.get_http_client;
@@ -124,7 +125,7 @@ function provider.sync(ctx)
     local library_id = ids[1]
     local artist_collect = {} --collect_library_artists(ctx, library_id)
     local sync = require("sync")
-    sync.sync_albums(client, ctx, library_id, artist_collect)
+    sync.sync_sub_albums(client, ctx, library_id, artist_collect)
     sync.sync_artists(client, ctx, artist_collect, library_id)
 end
 

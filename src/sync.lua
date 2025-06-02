@@ -3,7 +3,6 @@ local util = require('util')
 local M = {}
 M.__index = M
 
-
 local function format_time(timestamp)
     if timestamp == nil then
         timestamp = 0
@@ -57,7 +56,7 @@ local function check_artists_collect(t, native_id)
 end
 
 ---@param library_id integer
-function M.sync_albums(client, ctx, library_id, artists_collect)
+function M.sync_sub_albums(client, ctx, library_id, artists_collect)
     local detail_api_t = require('api.v3.album.detail')
     local api = require('api.album.sublist').new()
     local songs = {}
