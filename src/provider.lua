@@ -8,6 +8,7 @@ local inner = qcm.inner
 local ssl = qcm.crypto
 local get_http_client = qcm.get_http_client;
 local client = Client.new(inner:device_id())
+local ItemType = qcm.enum.ItemType;
 
 local status = {
     user_id = -1,
@@ -362,6 +363,27 @@ function provider.sync(ctx)
     local artist_collect = {} --collect_library_artists(ctx, library_id)
     sync_albums(ctx, library_id, artist_collect)
     sync_artists(ctx, artist_collect, library_id)
+end
+
+---@param ctx any
+---@param item_id string
+---@param item_type integer
+---@param value boolean
+function provider.favorite(ctx, item_id, item_type, value)
+    if (item_type == ItemType.Album) then
+        local api = require("api.album.sub").new(item_id, value)
+        local rsp = client:perform(api, 30)
+        return true
+    elseif (item_type == ItemType.Song) then
+        local api = require("api.radio.like").new(item_id, value)
+        local rsp = client:perform(api, 30)
+        return true
+    elseif (item_type == ItemType.Artist) then
+        local api = require("api.artist.sub").new(item_id, value)
+        local rsp = client:perform(api, 30)
+        return true
+    end
+    return false
 end
 
 function provider.image(item_id, pic_id, pic_type)

@@ -13,9 +13,9 @@ end
 
 function M:path()
     if self.sub then
-        return "/album/sub"
+        return "/artist/sub"
     else
-        return "/album/unsub"
+        return "/artist/unsub"
     end
 end
 
@@ -33,7 +33,8 @@ end
 
 function M:body()
     return {
-        id = self.id
+        artistId = self.id,
+        artistIds = { self.id, }
     }
 end
 

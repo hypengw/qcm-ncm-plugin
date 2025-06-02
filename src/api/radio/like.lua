@@ -1,6 +1,12 @@
 local M = {}
 M.__index = M
 
+---comment
+---@param track_id string
+---@param like boolean
+---@param alg any
+---@param time any
+---@return table
 function M.new(track_id, like, alg, time)
     local self = setmetatable({}, M)
     self.track_id = track_id
