@@ -242,7 +242,7 @@ function M.sync_album_from_ids(client, ctx, library_id, ids, album_id_map, artis
     ctx:sync_images(table.filter(images, function(v)
         return v.native_id ~= nil
     end))
-    ctx:sync_dynamics(dynamics, { exclude = { "is_favorite", } })
+    ctx:sync_dynamics(dynamics)
 
     return songs
 end
@@ -267,7 +267,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
             break
         end
 
-        for el in rsp.data do
+        for _, el in ipairs(rsp.data) do
             table.insert(ids, el.id)
         end
 
@@ -325,7 +325,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
         end
     end
 
-    ctx:sync_dynamics(dynamics)
+    ctx:sync_dynamics(dynamics, { exclude = { "is_favorite", } })
     ctx:sync_song_album_ids(library_id, models)
 end
 
