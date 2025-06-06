@@ -50,11 +50,10 @@
 ---@field edit_time string|osdate?
 
 ---@class QcmLibraryModel
----@field id integer
+---@field id? integer
 ---@field library_id integer
 ---@field provider_id integer
 ---@field native_id string
-
 
 ---@class QcmDynamicModel
 ---@field id integer

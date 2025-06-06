@@ -27,7 +27,7 @@ function M:body()
 end
 
 ---@class MProfile
----@field userId number
+---@field userId integer
 ---@field userType number
 ---@field nickname string
 ---@field avatarUrl string

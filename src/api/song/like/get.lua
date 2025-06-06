@@ -29,6 +29,12 @@ function M:body()
     }
 end
 
+---@class GetSongLikeRsp
+---@field code integer
+---@field ids integer[]
+---@field checkPoint integer
+
+---@return GetSongLikeRsp
 function M:parse_response(response)
     local data = response:json()
     return data

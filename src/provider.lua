@@ -6,9 +6,9 @@ local crypto = require('crypto')
 local qcm = require('qcm.mod')
 local inner = qcm.inner
 local ssl = qcm.crypto
-local get_http_client = qcm.get_http_client;
+local get_http_client = qcm.get_http_client
 local client = Client.new(inner:device_id())
-local ItemType = qcm.enum.ItemType;
+local ItemType = qcm.enum.ItemType
 
 local status = {
     user_id = -1,
@@ -105,17 +105,19 @@ function provider.login(auth_info)
     end
 end
 
+---@param ctx QcmSyncContext
 function provider.sync(ctx)
     local api = require('api.nuser.account').new()
     local rsp = client:perform(api, 30) --[[@as NuserAccountRsp]]
 
     qcm.debug(rsp)
+    local user_id = rsp.profile.userId;
 
     local ids = ctx:sync_libraries({ {
         library_id = -1,
         name = rsp.profile.nickname,
         provider_id = inner.id,
-        native_id = tostring(rsp.profile.userId),
+        native_id = tostring(user_id),
     }, })
 
     if (#ids ~= 1) then
@@ -123,8 +125,9 @@ function provider.sync(ctx)
     end
 
     local library_id = ids[1]
-    local artist_collect = {} --collect_library_artists(ctx, library_id)
+    local artist_collect = {}
     local sync = require("sync")
+    sync.sync_sub_songs(client, ctx, library_id, user_id, artist_collect)
     sync.sync_sub_albums(client, ctx, library_id, artist_collect)
     sync.sync_artists(client, ctx, artist_collect, library_id)
 end

@@ -23,6 +23,9 @@
 ---@field post fun(self: HttpClient, url: string): QcmRequestBuilder
 ---@field new_batch fun(self: HttpClient): HttpClientBatch
 
+---@class QcmSyncOptions
+---@field exclude string[]
+
 ---@class QcmSyncContext
 ---@field commit_album fun(self: QcmSyncContext, count: integer)
 ---@field commit_artist fun(self: QcmSyncContext, count: integer)
@@ -32,7 +35,7 @@
 ---@field sync_artists fun(self: QcmSyncContext, models: QcmArtistModel[]): integer[]
 ---@field sync_songs fun(self: QcmSyncContext, models: QcmSongModel[]): integer[]
 ---@field sync_images fun(self: QcmSyncContext, models: QcmImageModel[])
----@field sync_dynamics fun(self: QcmSyncContext, models: QcmDynamicModel[])
+---@field sync_dynamics fun(self: QcmSyncContext, models: QcmDynamicModel[], opts?: QcmSyncOptions)
 ---@field sync_song_album_ids fun(self: QcmSyncContext, library_id: integer, ids: string[][])
 ---@field sync_album_artist_ids fun(self: QcmSyncContext, models: QcmAlbumModel[])
 ---@field sync_song_artist_ids fun(self: QcmSyncContext, models: QcmArtistModel[])
