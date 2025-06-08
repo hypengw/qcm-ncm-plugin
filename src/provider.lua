@@ -9,6 +9,7 @@ local ssl = qcm.crypto
 local get_http_client = qcm.get_http_client
 local client = Client.new(inner:device_id())
 local ItemType = qcm.enum.ItemType
+local SyncState = qcm.enum.SyncState
 
 local status = {
     user_id = -1,
@@ -110,7 +111,10 @@ function provider.sync(ctx)
     local api = require('api.nuser.account').new()
     local rsp = client:perform(api, 30) --[[@as NuserAccountRsp]]
 
-    qcm.debug(rsp)
+    if rsp.profile == nil then
+        return SyncState.NotAuth
+    end
+
     local user_id = rsp.profile.userId;
 
     local ids = ctx:sync_libraries({ {
@@ -121,7 +125,7 @@ function provider.sync(ctx)
     }, })
 
     if (#ids ~= 1) then
-        error("library sync failed")
+        return SyncState.NotAuth
     end
 
     local library_id = ids[1]
