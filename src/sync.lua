@@ -293,7 +293,7 @@ function M.sync_sub_albums(client, ctx, library_id, artists_collect)
             native_id = tostring(song.id),
             album_id = album_id_map[song.al.id],
             track_number = song.no,
-            disc_number = 1,
+            disc_number = tonumber(song.cd) or 1,
             publish_time = format_time(song.publishTime),
             popularity = song.pop or 0,
             duration = song.dt * 1000,
