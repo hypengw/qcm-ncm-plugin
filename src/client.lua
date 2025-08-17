@@ -31,13 +31,6 @@ end
 ---@field device_params table Device-specific parameters
 ---@field web_params_cookie string Formatted web parameters as cookie string
 ---@field device_params_cookie string Formatted device parameters as cookie string
----@field new fun(device_id: string): Client Create a new client instance
----@field perform fun(self: Client, api: Api, timeout?: integer): any Execute a single API request
----@field perform_queue fun(self: Client, next: any, timeout?: integer): table[] Execute multiple API requests in batch
----@field get_base fun(self: Client): string Get base URL for requests
----@field prepare_body fun(self: Client, api: Api): table|string Prepare request body with encryption
----@field format_url fun(self: Client, base_url: string, api: Api): string Format complete request URL
----@field encrypt fun(self: Client, path: string, data: table|string, crypto_type: string): table|string Encrypt request data
 local Client = {}
 Client.__index = Client
 
@@ -116,7 +109,7 @@ function Client:perform_queue(next, timeout)
         local rsp = batch:wait_one()
         if rsp == nil then
             local ok = true
-            for i = 1, 5 do
+            for i = 1, 8 do
                 local api = next()
                 if not api then
                     ok = false

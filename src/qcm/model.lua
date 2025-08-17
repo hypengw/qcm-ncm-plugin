@@ -4,7 +4,7 @@
 ---@field library_id integer
 ---@field name string
 ---@field sort_name string?
----@field publish_time string|osdate
+---@field publish_time integer
 ---@field added_time string?
 ---@field track_count integer
 ---@field description string
@@ -45,7 +45,7 @@
 ---@field duration integer Duration in milliseconds
 ---@field can_play boolean?
 ---@field popularity number
----@field publish_time string|osdate
+---@field publish_time integer
 ---@field tags table?
 ---@field edit_time string|osdate?
 
@@ -60,5 +60,5 @@
 ---@field library_id integer
 ---@field item_id integer
 ---@field item_type string|integer
----@field is_favorite boolean
----@field is_external  boolean
+---@field favorite_at integer|nil
+---@field is_external boolean
