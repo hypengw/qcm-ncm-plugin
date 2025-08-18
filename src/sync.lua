@@ -216,10 +216,12 @@ function M:sync_album_from_ids(ctx, library_id, ids, artists_collect, override)
         local a = rsp.album --[[@as Album]]
 
         local disc_count = 1;
+        local duration = 0;
         for i = 1, #rsp.songs do
             local s = rsp.songs[i];
             local song_cd = tonumber(s.cd)
             disc_count = math.max(disc_count, song_cd ~= nil and song_cd or 1)
+            duration = duration + (s.dt or 0)
             table.insert(songs, s)
         end
         ctx:commit_song(#rsp.songs)
@@ -232,7 +234,8 @@ function M:sync_album_from_ids(ctx, library_id, ids, artists_collect, override)
             disc_count   = disc_count,
             track_count  = a.size,
             description  = a.description or '',
-            company      = a.company or ''
+            company      = a.company or '',
+            duration    = duration,
         } --[[@as QcmAlbumModel]]
         local over = (override or {})[a.id]
         if over ~= nil then
