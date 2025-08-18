@@ -1,3 +1,8 @@
+---@class QcmEnum
+---@field ItemType QcmEmItemType
+---@field SyncState QcmEmSyncState
+---@field AlbumType AlbumType
+
 ---@class QcmEmItemType
 ---@field Album integer
 ---@field Artist integer
@@ -11,6 +16,11 @@
 ---@field NetworkError integer
 ---@field UnknownError integer
 
----@class QcmEnum
----@field ItemType QcmEmItemType
----@field SyncState QcmEmSyncState
+---@class AlbumType
+---@field Unknown integer
+---@field Album integer
+---@field EP integer
+---@field Single integer
+---@field Soundtrack integer
+---@field Compilation integer
+---@field Live integer

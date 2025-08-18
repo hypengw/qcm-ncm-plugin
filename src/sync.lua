@@ -1,4 +1,5 @@
 local util = require('util')
+local qcm = require('qcm.mod')
 
 ---@class SyncOperator
 ---@field client Client
@@ -90,6 +91,25 @@ local function table_merge(dst, src)
         dst[k] = v
     end
     return dst
+end
+
+local function album_type_convert(type_str)
+    -- 专辑 精选集 Single EP 未知
+    if type_str == '专辑' then
+        return 'Album'
+    elseif type_str == '精选集' then
+        return 'Compilation';
+    elseif type_str == 'Single' then
+        return 'Single';
+    elseif type_str == 'EP' then
+        return 'EP';
+        -- elseif type_str == '原声' then
+        --     return 'Soundtrack';
+        -- elseif type_str == '现场' then
+        --     return 'Live';
+    else
+        return 'Unknown';
+    end
 end
 
 ---@param client Client
@@ -235,7 +255,8 @@ function M:sync_album_from_ids(ctx, library_id, ids, artists_collect, override)
             track_count  = a.size,
             description  = a.description or '',
             company      = a.company or '',
-            duration    = duration,
+            duration     = duration,
+            type         = album_type_convert(a.type),
         } --[[@as QcmAlbumModel]]
         local over = (override or {})[a.id]
         if over ~= nil then
