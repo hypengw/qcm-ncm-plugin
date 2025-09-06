@@ -105,29 +105,36 @@ end
 function Client:perform_queue(next, timeout)
     local batch = get_http_client():new_batch()
     local results = {}
+    local PERFORM_QUEUE_LIMIT = 12
+
     while true do
         local rsp = batch:wait_one()
-        if rsp == nil then
-            local ok = true
-            for i = 1, 8 do
-                local api = next()
-                if not api then
-                    ok = false
-                    break
-                end
-                local builder = self:_req_build(api, timeout)
-                batch:add(builder)
-            end
-            if not ok then
-                break
-            end
-        else
+        if rsp ~= nil then
             rsp = json.decode(rsp)
             -- error.check(rsp)
             if rsp.code ~= 200 then
                 print('warn: ' .. rsp.code .. ' ' .. rsp.message)
             else
                 table.insert(results, rsp)
+            end
+        end
+
+        -- add query
+        do
+            local count = PERFORM_QUEUE_LIMIT
+            local is_end = false
+            repeat
+                local api = next()
+                if not api then
+                    is_end = true
+                    break
+                end
+                local builder = self:_req_build(api, timeout)
+                count = batch:add(builder)
+            until count < PERFORM_QUEUE_LIMIT
+
+            if is_end then
+                break
             end
         end
     end

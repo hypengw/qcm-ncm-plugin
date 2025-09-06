@@ -1,7 +1,5 @@
 ---@class QcmAlbumModel
 ---@field id integer
----@field native_id string
----@field library_id integer
 ---@field name string
 ---@field sort_name string?
 ---@field publish_time integer
@@ -13,10 +11,8 @@
 
 ---@class QcmArtistModel
 ---@field id integer
----@field native_id string
 ---@field name string
 ---@field sort_name string?
----@field library_id integer
 ---@field description string
 ---@field album_count integer?
 ---@field music_count integer?
@@ -25,20 +21,15 @@
 ---@class QcmImageModel
 ---@field id integer
 ---@field item_id integer
----@field item_type string | integer
 ---@field image_type string | integer
----@field library_id integer
----@field native_id string?
 ---@field db string?
 ---@field fresh string?
 ---@field timestamp string?
 
 ---@class QcmSongModel
 ---@field id integer
----@field library_id integer
 ---@field name string
 ---@field sort_name string?
----@field native_id string
 ---@field album_id integer?
 ---@field track_number integer
 ---@field disc_number integer
@@ -49,6 +40,16 @@
 ---@field tags table?
 ---@field edit_time string|osdate?
 
+---@class QcmItemModel
+---@field id? integer
+---@field provider_id integer
+---@field native_id string
+---@field library_id integer
+---@field type QcmEmItemType
+---@field created_at? string|osdate?
+---@field updated_at? string|osdate?
+---@field last_synced_at? string|osdate?
+
 ---@class QcmLibraryModel
 ---@field id? integer
 ---@field library_id integer
@@ -57,8 +58,5 @@
 
 ---@class QcmDynamicModel
 ---@field id integer
----@field library_id integer
----@field item_id integer
----@field item_type string|integer
 ---@field favorite_at integer|nil
 ---@field is_external boolean

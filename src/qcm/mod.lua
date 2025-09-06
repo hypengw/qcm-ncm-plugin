@@ -16,7 +16,7 @@
 
 ---@class HttpClientBatch
 ---@field wait_one fun(self: HttpClientBatch): string
----@field add fun(self: HttpClientBatch, req: QcmRequestBuilder): QcmResponse
+---@field add fun(self: HttpClientBatch, req: QcmRequestBuilder): integer
 
 ---@class HttpClient
 ---@field get fun(self: HttpClient, url: string): QcmRequestBuilder
@@ -30,6 +30,7 @@
 ---@field commit_album fun(self: QcmSyncContext, count: integer)
 ---@field commit_artist fun(self: QcmSyncContext, count: integer)
 ---@field commit_song fun(self: QcmSyncContext, count: integer)
+---@field allocate_items fun(self: QcmSyncContext, models: QcmLibraryModel[]): integer[]
 ---@field sync_libraries fun(self: QcmSyncContext, models: QcmLibraryModel[]): integer[]
 ---@field sync_albums fun(self: QcmSyncContext, models: QcmAlbumModel[]): integer[]
 ---@field sync_artists fun(self: QcmSyncContext, models: QcmArtistModel[]): integer[]
