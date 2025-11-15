@@ -68,6 +68,7 @@
 ---@field json QcmJson JSON utilities
 ---@field debug fun(value: any) Debug print value
 ---@field enum QcmEnum Item type enums
+---@field error fun(value: any)
 
 ---@type Qcm
 local M = qcm;

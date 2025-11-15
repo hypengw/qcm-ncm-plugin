@@ -1,4 +1,5 @@
 local json = require("json")
+local qcm = require("qcm.mod")
 
 --[[
             if (var11 == 506) {
@@ -133,6 +134,8 @@ function M.check(rsp)
       error("Unexpected response: " .. json.encode(rsp))
    elseif rsp.code == 200 then
       return;
+   elseif rsp.code == 301 then
+      qcm.error("301 Not logged in")
    end
 
    local message = ''
@@ -142,7 +145,7 @@ function M.check(rsp)
       message = rsp.data
    end
 
-   error("Error: " .. rsp.code .. " " .. message)
+   qcm.error("Error: " .. rsp.code .. " " .. message)
 end
 
 return M
