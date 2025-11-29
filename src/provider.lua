@@ -130,10 +130,11 @@ function provider.sync(ctx)
 
     local library_id = ids[1]
     local artist_collect = {}
-    local sync = require("sync").new(client)
-    --sync:sync_sub_songs(ctx, library_id, user_id, artist_collect)
+    local sync = require("sync").new(client, status.user_id, inner.id)
+    sync:sync_sub_songs(ctx, library_id, user_id, artist_collect)
     sync:sync_sub_albums(ctx, library_id, artist_collect)
     sync:sync_artists(ctx, artist_collect, library_id)
+    sync:sync_mixes(ctx)
 end
 
 ---@param ctx any

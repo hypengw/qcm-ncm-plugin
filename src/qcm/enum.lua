@@ -8,6 +8,7 @@
 ---@field Artist integer
 ---@field Song integer
 ---@field Library integer
+---@field Mix integer
 
 ---@class QcmEmSyncState
 ---@field Finished integer

@@ -35,6 +35,7 @@
 ---@field sync_albums fun(self: QcmSyncContext, models: QcmAlbumModel[]): integer[]
 ---@field sync_artists fun(self: QcmSyncContext, models: QcmArtistModel[]): integer[]
 ---@field sync_songs fun(self: QcmSyncContext, models: QcmSongModel[]): integer[]
+---@field sync_remote_mixes fun(self: QcmSyncContext, models: QcmRemoteMixModel[])
 ---@field sync_images fun(self: QcmSyncContext, models: QcmImageModel[])
 ---@field sync_dynamics fun(self: QcmSyncContext, models: QcmDynamicModel[], opts?: QcmSyncOptions)
 ---@field sync_song_album_ids fun(self: QcmSyncContext, library_id: integer, ids: string[][])

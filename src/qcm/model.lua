@@ -42,10 +42,10 @@
 
 ---@class QcmItemModel
 ---@field id? integer
----@field provider_id integer
+---@field provider_id? integer
 ---@field native_id string
----@field library_id integer
----@field type QcmEmItemType
+---@field library_id integer|nil
+---@field type QcmEmItemType|string
 ---@field created_at? string|osdate?
 ---@field updated_at? string|osdate?
 ---@field last_synced_at? string|osdate?
@@ -60,3 +60,9 @@
 ---@field id integer
 ---@field favorite_at integer|nil
 ---@field is_external boolean
+
+---@class QcmRemoteMixModel
+---@field id integer
+---@field name string
+---@field description? string
+---@field mix_type string

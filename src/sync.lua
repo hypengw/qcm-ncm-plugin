@@ -4,6 +4,8 @@ local fun = require('third.fun')
 
 ---@class SyncOperator
 ---@field client Client
+---@field user_id integer
+---@field provider_id integer
 ---@field album_id_map table<integer, integer>
 ---@field song_id_map table<integer, integer>
 local M = {}
@@ -118,9 +120,11 @@ local function album_type_convert(type_str)
 end
 
 ---@param client Client
-function M.new(client)
+function M.new(client, user_id, provider_id)
     local self = setmetatable({}, M)
     self.client = client
+    self.user_id = user_id
+    self.provider_id = provider_id
     self.album_id_map = {}
     self.song_id_map = {}
     return self
@@ -499,6 +503,70 @@ function M:sync_artists(ctx, artist_collect, library_id)
     end
     ctx:sync_album_artist_ids(models)
     ctx:sync_song_artist_ids(song_models)
+end
+
+---@param ctx QcmSyncContext
+function M:sync_mixes(ctx)
+    do
+        local items = {}
+        local mixes = {}
+        local api = require('api.personalized.playlist').new()
+        local res = self.client:perform(api, 30)
+        for _, v in ipairs(res.result) do
+            table.insert(items, {
+                id = -1,
+                library_id = nil,
+                native_id = tostring(v.id),
+                updated_at = format_time(v.trackNumberUpdateTime),
+                type = 'Mix',
+            } --[[@as QcmItemModel]])
+
+            table.insert(mixes, {
+                id = -1,
+                mix_id = nil,
+                name = v.name,
+                track_count = v.trackCount,
+                mix_type = 'recommand',
+            } --[[@as QcmRemoteMixModel]])
+        end
+        local ids = ctx:allocate_items(items)
+        for i, id in ipairs(ids) do
+            mixes[i].id = id
+        end
+        ctx:sync_remote_mixes(mixes)
+    end
+
+    do
+        local items = {}
+        local mixes = {}
+        local api = require('api.user.playlist').new(self.user_id, 0, 1000)
+        local res = self.client:perform(api, 30)
+        for _, v in ipairs(res.playlist) do
+            table.insert(items, {
+                id = -1,
+                library_id = nil,
+                native_id = tostring(v.id),
+                type = 'Mix',
+                created_at = format_time(v.createTime),
+                updated_at = format_time(v.updateTime),
+            } --[[@as QcmItemModel]])
+
+            table.insert(mixes, {
+                id = -1,
+                mix_id = nil,
+                name = v.name,
+                track_count = v.trackCount,
+                description = v.description,
+                mix_type = 'user',
+            } --[[@as QcmRemoteMixModel]])
+        end
+
+        local ids = ctx:allocate_items(items)
+        for i, id in ipairs(ids) do
+            mixes[i].id = id
+        end
+        ctx:sync_remote_mixes(mixes)
+    end
 end
 
 return M
