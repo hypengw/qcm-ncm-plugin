@@ -88,7 +88,13 @@ local function check_artists_collect(t, native_id)
 end
 
 local function get_pic_id(a)
-    return a.picId_str or (a.picId and tostring(a.picId) or (a.pic and tostring(a.pic) or a.pic))
+    local pic_id = a.picId_str or (a.picId and tostring(a.picId) or (a.pic and tostring(a.pic) or a.pic))
+
+    if pic_id == nil and a.picUrl then
+        pic_id = util.extract_image_id(a.picUrl)
+    end
+
+    return pic_id
 end
 
 ---@param dst table
@@ -511,6 +517,7 @@ function M:sync_mixes(ctx, library_id)
     do
         local items = {}
         local mixes = {}
+        local images = {}
         local api = require('api.personalized.playlist').new()
         local res = self.client:perform(api, 30)
         for _, v in ipairs(res.result) do
@@ -529,17 +536,27 @@ function M:sync_mixes(ctx, library_id)
                 track_count = v.trackCount,
                 mix_type = 'recommand',
             } --[[@as QcmRemoteMixModel]])
+
+           table.insert(images, {
+                id         = -1,
+                item_id    = -1,
+                native_id  = get_pic_id(v),
+                image_type = 'Primary',
+            } --[[@as QcmImageModel]])
         end
         local ids = ctx:allocate_items(items)
         for i, id in ipairs(ids) do
             mixes[i].id = id
+            images[i].item_id = id
         end
         ctx:sync_remote_mixes(mixes)
+        ctx:sync_images(images)
     end
 
     do
         local items = {}
         local mixes = {}
+        local images = {}
         local api = require('api.user.playlist').new(self.user_id, 0, 1000)
         local res = self.client:perform(api, 30)
         for _, v in ipairs(res.playlist) do
@@ -560,13 +577,22 @@ function M:sync_mixes(ctx, library_id)
                 description = v.description,
                 mix_type = 'user',
             } --[[@as QcmRemoteMixModel]])
+
+            table.insert(images, {
+                id         = -1,
+                item_id    = -1,
+                native_id  = get_pic_id(v),
+                image_type = 'Primary',
+            } --[[@as QcmImageModel]])
         end
 
         local ids = ctx:allocate_items(items)
         for i, id in ipairs(ids) do
             mixes[i].id = id
+            images[i].item_id = id
         end
         ctx:sync_remote_mixes(mixes)
+        ctx:sync_images(images)
     end
 end
 
@@ -586,7 +612,7 @@ function M:sync_mix(ctx, item)
 
         table.insert(items, {
             id = -1,
-            library_id = nil,
+            library_id = library_id,
             native_id = tostring(v.id),
             update_at = v.trackNumberUpdateTime,
             type = 'Mix',
@@ -609,6 +635,8 @@ function M:sync_mix(ctx, item)
     end
 
     local song_ids = {}
+    local images = {}
+
     do
         local songs = {}
         local albums = {}
@@ -641,6 +669,13 @@ function M:sync_mix(ctx, item)
             } --[[@as QcmAlbumModel]]
 
             table.insert(albums, album)
+
+            table.insert(images, {
+                id         = -1,
+                item_id    = -1,
+                native_id  = get_pic_id(a),
+                image_type = 'Primary',
+            } --[[@as QcmImageModel]])
         end
 
 
@@ -655,12 +690,14 @@ function M:sync_mix(ctx, item)
             for i, id in ipairs(ids) do
                 albums[i].id = id
                 dynamics[i].id = id
+                images[i].item_id = id
                 local native_id = items[i].native_id
                 self.album_id_map[native_id] = id
             end
             ctx:sync_albums(albums, { include = { 'name' } })
             ctx:sync_dynamics(dynamics, { include = { 'update_at' } })
         end
+
 
         do
             local items = {}
@@ -677,6 +714,7 @@ function M:sync_mix(ctx, item)
     end
 
     ctx:sync_remote_mix_song_ids(mix_id, song_ids)
+    ctx:sync_images(images)
 end
 
 return M
