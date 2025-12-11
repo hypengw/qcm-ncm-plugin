@@ -134,7 +134,14 @@ function provider.sync(ctx)
     sync:sync_sub_songs(ctx, library_id, user_id, artist_collect)
     sync:sync_sub_albums(ctx, library_id, artist_collect)
     sync:sync_artists(ctx, artist_collect, library_id)
-    sync:sync_mixes(ctx)
+    sync:sync_mixes(ctx, library_id)
+end
+
+function provider.sync_item(ctx, item)
+    local sync = require("sync").new(client, status.user_id, inner.id)
+    if item.type == 'Mix' then
+        sync:sync_mix(ctx, item)
+    end
 end
 
 ---@param ctx any

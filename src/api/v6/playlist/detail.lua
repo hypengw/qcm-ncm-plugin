@@ -1,8 +1,9 @@
 local M = {}
 M.__index = M
 
-function M.new()
+function M.new(id)
     local self = setmetatable({}, M)
+    self.id = id
     return self
 end
 
@@ -23,7 +24,11 @@ function M:query()
 end
 
 function M:body()
-    return {}
+    return {
+        id = self.id,
+        n = 1000000,
+        s = 10,
+    }
 end
 
 function M:parse_response(response)

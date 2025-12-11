@@ -24,7 +24,8 @@
 ---@field new_batch fun(self: HttpClient): HttpClientBatch
 
 ---@class QcmSyncOptions
----@field exclude string[]
+---@field include? string[]
+---@field exclude? string[]
 
 ---@class QcmSyncContext
 ---@field commit_album fun(self: QcmSyncContext, count: integer)
@@ -32,15 +33,16 @@
 ---@field commit_song fun(self: QcmSyncContext, count: integer)
 ---@field allocate_items fun(self: QcmSyncContext, models: QcmLibraryModel[]): integer[]
 ---@field sync_libraries fun(self: QcmSyncContext, models: QcmLibraryModel[]): integer[]
----@field sync_albums fun(self: QcmSyncContext, models: QcmAlbumModel[]): integer[]
+---@field sync_albums fun(self: QcmSyncContext, models: QcmAlbumModel[], opts?: QcmSyncOptions): integer[]
 ---@field sync_artists fun(self: QcmSyncContext, models: QcmArtistModel[]): integer[]
 ---@field sync_songs fun(self: QcmSyncContext, models: QcmSongModel[]): integer[]
----@field sync_remote_mixes fun(self: QcmSyncContext, models: QcmRemoteMixModel[])
+---@field sync_remote_mixes fun(self: QcmSyncContext, models: QcmRemoteMixModel[], opts?: QcmSyncOptions[])
 ---@field sync_images fun(self: QcmSyncContext, models: QcmImageModel[])
 ---@field sync_dynamics fun(self: QcmSyncContext, models: QcmDynamicModel[], opts?: QcmSyncOptions)
 ---@field sync_song_album_ids fun(self: QcmSyncContext, library_id: integer, ids: string[][])
 ---@field sync_album_artist_ids fun(self: QcmSyncContext, models: QcmAlbumModel[])
 ---@field sync_song_artist_ids fun(self: QcmSyncContext, models: QcmArtistModel[])
+---@field sync_remote_mix_song_ids fun(self: QcmSyncContext, remote_mix_id: integer, song_ids: integer[])
 
 ---@class QcmHex
 ---@field encode_low fun(data: string): string

@@ -1,12 +1,12 @@
 ---@class QcmAlbumModel
 ---@field id integer
 ---@field name string
----@field sort_name string?
----@field publish_time integer
----@field added_time string?
 ---@field track_count integer
----@field description string
----@field company string
+---@field sort_name string?
+---@field publish_time integer?
+---@field added_time string?
+---@field description string?
+---@field company string?
 ---@field edit_time string|osdate?
 
 ---@class QcmArtistModel
