@@ -90,8 +90,12 @@ end
 local function get_pic_id(a)
     local pic_id = a.picId_str or (a.picId and tostring(a.picId) or (a.pic and tostring(a.pic) or a.pic))
 
-    if pic_id == nil and a.picUrl then
-        pic_id = util.extract_image_id(a.picUrl)
+    if pic_id == nil then
+        if a.picUrl then
+            pic_id = util.extract_image_id(a.picUrl)
+        elseif a.coverImgUrl then
+            pic_id = util.extract_image_id(a.coverImgUrl)
+        end
     end
 
     return pic_id
@@ -537,7 +541,7 @@ function M:sync_mixes(ctx, library_id)
                 mix_type = 'recommand',
             } --[[@as QcmRemoteMixModel]])
 
-           table.insert(images, {
+            table.insert(images, {
                 id         = -1,
                 item_id    = -1,
                 native_id  = get_pic_id(v),
