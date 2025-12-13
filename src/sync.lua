@@ -640,11 +640,23 @@ function M:sync_mix(ctx, item)
 
     local song_ids = {}
     local images = {}
+    local mix_songs = rsp.playlist.tracks or {}
+
+    if #mix_songs ~= #rsp.playlist.trackIds then
+        local ids = {}
+        for _, v in ipairs(rsp.playlist.trackIds) do
+            table.insert(ids, v.id)
+        end
+        local api = require('api.v3.song.detail').new(ids)
+
+        local rsp = self.client:perform(api, 30)
+        mix_songs = rsp.songs or {}
+    end
 
     do
         local songs = {}
         local albums = {}
-        for _, song in ipairs(rsp.playlist.tracks) do
+        for _, song in ipairs(mix_songs) do
             table.insert(songs, song_model_from_detail(song, item.library_id))
 
             local a = song.al

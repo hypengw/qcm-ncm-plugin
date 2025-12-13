@@ -1,14 +1,13 @@
 local M = {}
 M.__index = M
 
-function M.new(id)
+function M.new()
     local self = setmetatable({}, M)
-    self.id = id
     return self
 end
 
 function M:path()
-    return "/v6/playlist/detail"
+    return "/discovery/recommend/songs/history/recent"
 end
 
 function M:operation()
@@ -24,14 +23,7 @@ function M:query()
 end
 
 function M:body()
-    return {
-        id = self.id,
-        t = 0,
-        n = 10000,
-        s = 5,
-        -- shareUserId=%d
-        -- sharedInvitationId=%s
-    }
+    return {}
 end
 
 function M:parse_response(response)

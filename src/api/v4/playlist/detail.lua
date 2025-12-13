@@ -8,7 +8,7 @@ function M.new(id)
 end
 
 function M:path()
-    return "/v6/playlist/detail"
+    return "/playlist/v4/detail"
 end
 
 function M:operation()
