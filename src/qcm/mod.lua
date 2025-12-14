@@ -64,12 +64,16 @@
 ---@field encode fun(value: any): string Encode value to JSON string
 ---@field decode fun(json: string): any Decode JSON string to value
 
+---@class QcmTime
+---@field now fun(): integer
+
 ---@class Qcm
 ---@field inner QcmInner Provider inner data
 ---@field get_http_client fun(): HttpClient Get HTTP client instance
 ---@field crypto QcmCrypto Cryptographic functions
 ---@field json QcmJson JSON utilities
 ---@field debug fun(value: any) Debug print value
+---@field time QcmTime 
 ---@field enum QcmEnum Item type enums
 ---@field error fun(value: any)
 
