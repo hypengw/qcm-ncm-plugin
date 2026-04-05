@@ -600,6 +600,87 @@ function M:sync_mixes(ctx, library_id)
     end
 end
 
+function M:sync_songs_internal(ctx, library_id, mix_songs)
+    local song_ids = {}
+    local images = {}
+    local songs = {}
+    local albums = {}
+
+    for _, song in ipairs(mix_songs) do
+        table.insert(songs, song_model_from_detail(song, library_id))
+
+        local a = song.al
+
+        local album = {
+            item         = {
+                id         = -1,
+                library_id = library_id,
+                type       = 'Album',
+                native_id  = tostring(a.id),
+            },
+            dynamic      = {
+                id = -1,
+                favorite_at = nil,
+                is_external = true
+            } --[[@as QcmDynamicModel]],
+            id           = -1,
+            name         = a.name or '',
+            duration     = 0,
+            type         = 'Album',
+            publish_time = nil,
+            disc_count   = 0,
+            track_count  = 0,
+            description  = nil,
+            company      = nil,
+        } --[[@as QcmAlbumModel]]
+
+        table.insert(albums, album)
+
+        table.insert(images, {
+            id         = -1,
+            item_id    = -1,
+            native_id  = get_pic_id(a),
+            image_type = 'Primary',
+        } --[[@as QcmImageModel]])
+    end
+
+    do
+        local items = {}
+        local dynamics = {}
+        for _, v in pairs(albums) do
+            table.insert(items, v.item)
+            table.insert(dynamics, v.dynamic)
+        end
+        local ids = ctx:allocate_items(items)
+        for i, id in ipairs(ids) do
+            albums[i].id = id
+            dynamics[i].id = id
+            images[i].item_id = id
+            local native_id = items[i].native_id
+            self.album_id_map[native_id] = id
+        end
+        ctx:sync_albums(albums, { include = { 'name' } })
+        ctx:sync_dynamics(dynamics, { include = { 'update_at' } })
+    end
+
+    do
+        local items = {}
+        for _, v in pairs(songs) do
+            v.album_id = self.album_id_map[v._album_native_id]
+            table.insert(items, v.item)
+        end
+        song_ids = ctx:allocate_items(items)
+        local out_songs = {}
+        for i, id in ipairs(song_ids) do
+            songs[i].id = id
+            table.insert(out_songs, songs[i])
+        end
+        ctx:sync_songs(songs)
+        ctx:sync_images(images)
+        return out_songs
+    end
+end
+
 ---@param ctx QcmSyncContext
 function M:sync_mix(ctx, item)
     local library_id = item.library_id
@@ -638,8 +719,6 @@ function M:sync_mix(ctx, item)
         ctx:sync_remote_mixes(mixes, { exclude = { 'mix_type' } })
     end
 
-    local song_ids = {}
-    local images = {}
     local mix_songs = rsp.playlist.tracks or {}
 
     if #mix_songs ~= #rsp.playlist.trackIds then
@@ -653,84 +732,14 @@ function M:sync_mix(ctx, item)
         mix_songs = rsp.songs or {}
     end
 
-    do
-        local songs = {}
-        local albums = {}
-        for _, song in ipairs(mix_songs) do
-            table.insert(songs, song_model_from_detail(song, item.library_id))
-
-            local a = song.al
-
-            local album = {
-                item         = {
-                    id         = -1,
-                    library_id = library_id,
-                    type       = 'Album',
-                    native_id  = tostring(a.id),
-                },
-                dynamic      = {
-                    id = -1,
-                    favorite_at = nil,
-                    is_external = true
-                } --[[@as QcmDynamicModel]],
-                id           = -1,
-                name         = a.name or '',
-                duration     = 0,
-                type         = 'Album',
-                publish_time = nil,
-                disc_count   = 0,
-                track_count  = 0,
-                description  = nil,
-                company      = nil,
-            } --[[@as QcmAlbumModel]]
-
-            table.insert(albums, album)
-
-            table.insert(images, {
-                id         = -1,
-                item_id    = -1,
-                native_id  = get_pic_id(a),
-                image_type = 'Primary',
-            } --[[@as QcmImageModel]])
-        end
-
-
-        do
-            local items = {}
-            local dynamics = {}
-            for _, v in pairs(albums) do
-                table.insert(items, v.item)
-                table.insert(dynamics, v.dynamic)
-            end
-            local ids = ctx:allocate_items(items)
-            for i, id in ipairs(ids) do
-                albums[i].id = id
-                dynamics[i].id = id
-                images[i].item_id = id
-                local native_id = items[i].native_id
-                self.album_id_map[native_id] = id
-            end
-            ctx:sync_albums(albums, { include = { 'name' } })
-            ctx:sync_dynamics(dynamics, { include = { 'update_at' } })
-        end
-
-
-        do
-            local items = {}
-            for _, v in pairs(songs) do
-                v.album_id = self.album_id_map[v._album_native_id]
-                table.insert(items, v.item)
-            end
-            song_ids = ctx:allocate_items(items)
-            for i, id in ipairs(song_ids) do
-                songs[i].id = id
-            end
-            ctx:sync_songs(songs)
-        end
-    end
+    local songs = self:sync_songs_internal(ctx, library_id, mix_songs)
+    local song_ids = fun.iter(songs):map(function(v) return v.id end):totable()
 
     ctx:sync_remote_mix_song_ids(mix_id, song_ids)
-    ctx:sync_images(images)
+end
+
+function M:sync_songs(ctx, library_id, mix_songs)
+    return self:sync_songs_internal(ctx, library_id, mix_songs)
 end
 
 return M

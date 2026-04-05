@@ -135,6 +135,10 @@ function provider.sync(ctx)
     sync:sync_sub_albums(ctx, library_id, artist_collect)
     sync:sync_artists(ctx, artist_collect, library_id)
     sync:sync_mixes(ctx, library_id)
+    ctx:sync_radio_queues({
+        { native_id = "roaming/daily", name = "每日推荐", description = "根据你的口味每日更新" },
+        { native_id = "roaming/fm",    name = "私人漫游", description = "私人 FM 模式" },
+    })
 end
 
 function provider.sync_item(ctx, item)
@@ -142,6 +146,44 @@ function provider.sync_item(ctx, item)
     if item.type == 'Mix' then
         sync:sync_mix(ctx, item)
     end
+end
+
+function provider.get_queue_next(ctx, native_id, current_native_ids)
+    local libs = ctx:libraries()
+    local library_id = -1
+    if #libs > 0 then
+        library_id = libs[1].library_id
+    end
+    local sync = require("sync").new(client, status.user_id, inner.id)
+
+    if native_id == "roaming/daily" then
+        local api = require('api.v3.discovery.recommend.songs').new()
+        local rsp = client:perform(api, 30)
+        if rsp.code == 200 and rsp.data and rsp.data.dailySongs then
+            return sync:sync_songs(ctx, library_id, rsp.data.dailySongs)
+        end
+    elseif native_id == "roaming/fm" then
+        local api = require('api.v1.radio.get').new()
+        local rsp = client:perform(api, 30)
+
+        if rsp.code == 200 and rsp.data then
+            local songs = sync:sync_songs(ctx, library_id, rsp.data)
+            qcm.debug(songs)
+            return songs
+        end
+    else
+        local seed_id = native_id:match("^roaming/(%d+)$")
+        if seed_id == nil then
+            return {}
+        end
+        local current_native_id = current_native_ids[#current_native_ids] or seed_id
+        local api = require('api.v1.playmode.song.playlist').new(seed_id, current_native_id, 3)
+        local rsp = client:perform(api, 30)
+        if rsp.code == 200 and rsp.data and rsp.data.list then
+            return sync:sync_songs(ctx, library_id, rsp.data.list)
+        end
+    end
+    return {}
 end
 
 ---@param ctx any
