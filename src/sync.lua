@@ -47,6 +47,12 @@ end
 ---@param library_id integer
 ---@param album_id? integer
 local function song_model_from_detail(song, library_id, album_id)
+    -- 兼容 v3 API (al/dt/pop) 和 v1.radio.get (album/duration/popularity)
+    local al = song.al or song.album
+    -- v3: dt 单位秒需 ×1000；v1.radio: duration 已是 ms
+    local duration_ms = song.dt and (song.dt * 1000) or (song.duration or 0)
+    local pop = song.pop or song.popularity or 0
+
     ---@type QcmSongModel
     local item = {
         item = {
@@ -58,12 +64,12 @@ local function song_model_from_detail(song, library_id, album_id)
         id = -1,
         name = song.name,
         album_id = album_id or -1,
-        _album_native_id = tostring(song.al.id),
+        _album_native_id = tostring(al.id),
         track_number = song.no,
         disc_number = 1,
         publish_time = song.publishTime,
-        popularity = song.pop or 0,
-        duration = song.dt * 1000,
+        popularity = pop,
+        duration = duration_ms,
     }
     return item
 end
@@ -609,7 +615,7 @@ function M:sync_songs_internal(ctx, library_id, mix_songs)
     for _, song in ipairs(mix_songs) do
         table.insert(songs, song_model_from_detail(song, library_id))
 
-        local a = song.al
+        local a = song.al or song.album
 
         local album = {
             item         = {

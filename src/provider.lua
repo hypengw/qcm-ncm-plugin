@@ -156,19 +156,13 @@ function provider.get_queue_next(ctx, native_id, current_native_ids)
     end
     local sync = require("sync").new(client, status.user_id, inner.id)
 
-    if native_id == "roaming/daily" then
-        local api = require('api.v3.discovery.recommend.songs').new()
-        local rsp = client:perform(api, 30)
-        if rsp.code == 200 and rsp.data and rsp.data.dailySongs then
-            return sync:sync_songs(ctx, library_id, rsp.data.dailySongs)
-        end
-    elseif native_id == "roaming/fm" then
+    -- daily 推荐是 mix（固定列表），不走 queue；仅 fm 是无限流 queue
+    if native_id == "roaming/fm" then
         local api = require('api.v1.radio.get').new()
         local rsp = client:perform(api, 30)
 
         if rsp.code == 200 and rsp.data then
             local songs = sync:sync_songs(ctx, library_id, rsp.data)
-            qcm.debug(songs)
             return songs
         end
     else
