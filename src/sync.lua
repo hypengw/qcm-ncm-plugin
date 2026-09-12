@@ -523,6 +523,53 @@ end
 
 ---@param ctx QcmSyncContext
 ---@param library_id integer
+---@param native_id string
+function M:sync_daily_mix(ctx, library_id, native_id)
+    local api = require('api.v3.discovery.recommend.songs').new()
+    local rsp = self.client:perform(api, 30)
+    local daily_songs = rsp.data and rsp.data.dailySongs
+    if rsp.code ~= 200 or daily_songs == nil then
+        return
+    end
+
+    local ids = ctx:allocate_items({ {
+        id = -1,
+        library_id = library_id,
+        native_id = native_id,
+        type = 'Mix',
+    } --[[@as QcmItemModel]] })
+    if #ids ~= 1 then
+        return
+    end
+
+    local mix_item_id = ids[1]
+    ctx:sync_remote_mixes({ {
+        id = mix_item_id,
+        name = "每日推荐",
+        description = "根据你的口味每日更新",
+        track_count = #daily_songs,
+        mix_type = 'daily',
+    } --[[@as QcmRemoteMixModel]] })
+
+    local first_song = daily_songs[1]
+    local cover = first_song and (first_song.al or first_song.album)
+    local pic_id = cover and get_pic_id(cover)
+    if pic_id ~= nil then
+        ctx:sync_images({ {
+            id = -1,
+            item_id = mix_item_id,
+            native_id = pic_id,
+            image_type = 'Primary',
+        } --[[@as QcmImageModel]] })
+    end
+
+    local songs = self:sync_songs_internal(ctx, library_id, daily_songs)
+    local song_ids = fun.iter(songs):map(function(v) return v.id end):totable()
+    ctx:sync_remote_mix_song_ids(mix_item_id, song_ids)
+end
+
+---@param ctx QcmSyncContext
+---@param library_id integer
 function M:sync_mixes(ctx, library_id)
     do
         local items = {}
