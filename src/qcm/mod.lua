@@ -3,9 +3,11 @@
 ---@field device_id fun(self: QcmInner): string
 
 ---@class QcmResponse
----@field code integer HTTP response code
----@field body string response body
----@field headers table<string, string> HTTP headers
+---@field status fun(self: QcmResponse): integer
+---@field json fun(self: QcmResponse): any
+---@field text fun(self: QcmResponse): string
+---@field headers fun(self: QcmResponse): table<string,string>
+---@field close fun(self: QcmResponse)
 
 ---@class QcmRequestBuilder
 ---@field headers fun(self: QcmRequestBuilder, headers: table<string, string> ): QcmRequestBuilder
@@ -13,15 +15,18 @@
 ---@field query fun(self: QcmRequestBuilder, query: table<string, any>): QcmRequestBuilder
 ---@field timeout fun(self: QcmRequestBuilder, t: integer): QcmRequestBuilder
 ---@field send fun(self: QcmRequestBuilder): QcmResponse
+---@field build fun(self: QcmRequestBuilder): userdata
 
 ---@class HttpClientBatch
----@field wait_one fun(self: HttpClientBatch): string
----@field add fun(self: HttpClientBatch, req: QcmRequestBuilder): integer
+---@field wait_one fun(self: HttpClientBatch): {key:string,response:QcmResponse?,error:any?}?
+---@field add fun(self: HttpClientBatch, key:string, request:userdata)
+---@field seal fun(self: HttpClientBatch)
+---@field close fun(self: HttpClientBatch)
 
 ---@class HttpClient
 ---@field get fun(self: HttpClient, url: string): QcmRequestBuilder
 ---@field post fun(self: HttpClient, url: string): QcmRequestBuilder
----@field new_batch fun(self: HttpClient): HttpClientBatch
+---@field new_batch fun(self: HttpClient, options:{results:string,limit:integer}): HttpClientBatch
 
 ---@class QcmSyncOptions
 ---@field include? string[]

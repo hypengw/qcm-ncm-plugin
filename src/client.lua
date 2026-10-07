@@ -103,41 +103,37 @@ function Client:perform(api, timeout)
 end
 
 function Client:perform_queue(next, timeout)
-    local batch = get_http_client():new_batch()
-    local results = {}
-    local PERFORM_QUEUE_LIMIT = 12
-
-    while true do
-        local rsp = batch:wait_one()
-        if rsp ~= nil then
-            rsp = json.decode(rsp)
-            -- error.check(rsp)
-            if rsp.code ~= 200 then
-                print('warn: ' .. rsp.code .. ' ' .. rsp.message)
-            else
-                table.insert(results, rsp)
-            end
-        end
-
-        -- add query
-        do
-            local count = PERFORM_QUEUE_LIMIT
-            local is_end = false
-            repeat
+    local limit = 12
+    local batch = get_http_client():new_batch { results = 'response', limit = limit }
+    local results, pending = {}, {}
+    local count, sequence, ended = 0, 0, false
+    local ok, failure = pcall(function()
+        while true do
+            while not ended and count < limit do
                 local api = next()
                 if not api then
-                    is_end = true
+                    ended = true
+                    batch:seal()
                     break
                 end
-                local builder = self:_req_build(api, timeout)
-                count = batch:add(builder)
-            until count < PERFORM_QUEUE_LIMIT
-
-            if is_end then
-                break
+                sequence = sequence + 1
+                local key = tostring(sequence)
+                batch:add(key, self:_req_build(api, timeout):build())
+                pending[key] = api
+                count = count + 1
             end
+            local completed = batch:wait_one()
+            if not completed then break end
+            local api = assert(pending[completed.key], 'unknown batch key')
+            pending[completed.key], count = nil, count - 1
+            if completed.error then _G.error(completed.error) end
+            local response = api:parse_response(completed.response)
+            if not api.no_error_check then error.check(response) end
+            results[#results + 1] = response
         end
-    end
+    end)
+    batch:close()
+    if not ok then _G.error(failure) end
     return results
 end
 
