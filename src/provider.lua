@@ -205,17 +205,16 @@ function provider.favorite(ctx, item_id, item_type, value)
     return false
 end
 
-function provider.image(item_id, pic_id, pic_type)
+function provider.prepare_image(item_id, pic_id, pic_type)
     if pic_id == nil then
         return nil
     end
     local client = get_http_client()
     local url = string.format("https://p1.music.126.net/%s/%s.jpg?param=400x400", crypto.encrypt_id(pic_id), pic_id)
-    local rsp = client:get(url):send()
-    return rsp
+    return client:get(url):stream {headers_timeout_ms=30000}
 end
 
-function provider.audio(item_id, headers)
+function provider.prepare_audio(item_id)
     local api = require('api.song.enhance.player.url.v1').new(item_id)
     local rsp = client:perform(api, 30) --[[@as SongPlayerUrlResponse]]
 
@@ -227,10 +226,17 @@ function provider.audio(item_id, headers)
         return nil
     end
     local client = get_http_client()
-    if headers == nil then
-        headers = {}
-    end
-    return client:get(url):headers(headers):send()
+    return client:get(url):stream {headers_timeout_ms=30000}
+end
+
+function provider.image(item_id, pic_id, pic_type)
+    local request = provider.prepare_image(item_id, pic_id, pic_type)
+    if request then return request:send() end
+end
+
+function provider.audio(item_id, headers)
+    local request = provider.prepare_audio(item_id)
+    if request then return request:headers(headers or {}):send() end
 end
 
 function provider.subtitle(item_id)
