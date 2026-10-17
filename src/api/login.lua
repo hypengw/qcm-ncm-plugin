@@ -1,4 +1,4 @@
-local M = {}
+local M = {auth_request = true}
 M.__index = M
 
 function M.new(username, password_md5)

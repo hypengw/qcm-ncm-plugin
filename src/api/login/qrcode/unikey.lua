@@ -1,4 +1,4 @@
-local QrcodeUnikey = {}
+local QrcodeUnikey = {auth_request = true}
 QrcodeUnikey.__index = QrcodeUnikey
 
 function QrcodeUnikey.new()

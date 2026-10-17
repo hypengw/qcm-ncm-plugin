@@ -134,8 +134,8 @@ function M.check(rsp)
       error("Unexpected response: " .. json.encode(rsp))
    elseif rsp.code == 200 then
       return;
-   elseif rsp.code == 301 then
-      qcm.error("301 Not logged in")
+   elseif rsp.code >= 300 and rsp.code <= 304 then
+      qcm.error {code = 'not_auth'}
    end
 
    local message = ''

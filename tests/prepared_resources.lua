@@ -1,3 +1,4 @@
+package.path = 'src/?.lua;' .. package.path
 local calls = 0
 local sent = {}
 local function builder(url)
@@ -31,7 +32,7 @@ package.preload['api.song.enhance.player.url.v1'] = function()
 end
 package.preload['qcm.mod'] = function()
     return {
-        inner = {device_id = function() return 'test' end},
+        inner = {device_id = function() return 'test' end, new_session_id = function() return 'scope' end},
         crypto = {}, enum = {ItemType = {}, SyncState = {}},
         get_http_client = function() return {get = function(_, url) return builder(url) end} end,
     }

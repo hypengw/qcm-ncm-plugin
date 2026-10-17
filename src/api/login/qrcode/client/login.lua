@@ -1,4 +1,4 @@
-local QrcodeLogin = {}
+local QrcodeLogin = {auth_request = true}
 QrcodeLogin.__index = QrcodeLogin
 
 function QrcodeLogin.new(key)

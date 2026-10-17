@@ -7,7 +7,9 @@ local qcm = require('qcm.mod')
 local inner = qcm.inner
 local ssl = qcm.crypto
 local get_http_client = qcm.get_http_client
-local client = Client.new(inner:device_id())
+local session = require('session').new()
+local client = Client.new(inner:device_id(), session)
+local load_error
 local ItemType = qcm.enum.ItemType
 local SyncState = qcm.enum.SyncState
 local DAILY_MIX_NATIVE_ID = "recommend/daily"
@@ -29,20 +31,38 @@ table.filter = function(t, filterIter)
 end
 
 function provider.save()
-    return json.encode(status)
+    if load_error then error(load_error, 0) end
+    local saved = {user_id = status.user_id, nickname = status.nickname, avatar_url = status.avatar_url, session = session.state}
+    return json.encode(saved)
 end
 
 function provider.load(data)
-    local s = json.decode(data)
-    status.user_id = s.user_id
-    status.nickname = s.nickname
-    status.avatar_url = s.avatar_url
+    load_error = 'invalid saved NCM authentication'
+    local s = data == '' and {} or json.decode(data)
+    assert(type(s) == 'table', load_error)
+    assert(s.user_id == nil or math.type(s.user_id) == 'integer', load_error)
+    assert(s.nickname == nil or type(s.nickname) == 'string', load_error)
+    assert(s.avatar_url == nil or type(s.avatar_url) == 'string', load_error)
+    session:load(s.session, s.user_id ~= nil and s.user_id ~= -1)
+    status.user_id = s.user_id or -1
+    status.nickname = s.nickname or ''
+    status.avatar_url = s.avatar_url or ''
+    load_error = nil
+end
+
+function provider.resource_scope()
+    if load_error then error(load_error, 0) end
+    return session:scope()
 end
 
 function provider.check()
+    if load_error then error(load_error, 0) end
+    client:perform(require('api.nuser.account').new(), 30)
 end
 
 function provider.qr()
+    session:begin()
+    load_error = nil
     local Api = require('api.login.qrcode.unikey')
     local api = Api.new()
     local res = client:perform(api, 30)
@@ -56,9 +76,11 @@ function provider.login(auth_info)
     local m = auth_info.method
     local api
     if m.type == "Email" then
+        session:begin()
+        load_error = nil
         local Api = require('api.login')
-        local pw = ssl.digest("md5", m.pw)
-        api = Api.new(m.username, pw)
+        local pw = ssl.hex.encode_low(ssl.digest("md5", m.pw))
+        api = Api.new(m.email or m.username, pw)
     elseif m.type == "Qr" then
         local Api = require('api.login.qrcode.client.login')
         api = Api.new(m.key)
@@ -68,11 +90,14 @@ function provider.login(auth_info)
     local res = client:perform(api, 30)
     if res.code == 200 or res.code == 803 then
         local api         = require('api.nuser.account').new()
+        api.auth_request = true
         local rsp         = client:perform(api, 30) --[[@as NuserAccountRsp]]
+        session:authenticated()
         status.user_id    = rsp.profile.userId
         status.nickname   = rsp.profile.nickname
         status.avatar_url = rsp.profile.avatarUrl
 
+        session:save()
         return {
             type = "Ok",
         }

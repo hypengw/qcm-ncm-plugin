@@ -34,7 +34,7 @@ end
 local Client = {}
 Client.__index = Client
 
-function Client.new(device_id)
+function Client.new(device_id, session)
     local self = setmetatable({}, Client)
 
     -- Generate random player_id
@@ -43,6 +43,7 @@ function Client.new(device_id)
         player_id = player_id .. tostring(math.random(0, 9))
     end
 
+    self.session = session
     self.device_id = device_id
     self.web_params = {
         playerid = player_id,
@@ -93,47 +94,69 @@ function Client:_req_build(api, timeout)
     return builder
 end
 
-function Client:perform(api, timeout)
+function Client:_response(api, response, generation)
+    local ok, result = pcall(function()
+        if self.session then
+            self.session:accept(response, generation)
+            self.session:save()
+        end
+        local value = api:parse_response(response)
+        if self.session then self.session:check(generation) end
+        return value
+    end)
+    response:close()
+    if not ok then _G.error(result, 0) end
+    return result
+end
+
+function Client:_send(api, timeout)
+    local generation = self.session and self.session.generation
     local response = self:_req_build(api, timeout):send()
-    local rsp = api:parse_response(response)
-    if not api.no_error_check then
-        error.check(rsp)
+    return self:_response(api, response, generation)
+end
+
+function Client:perform(api, timeout)
+    if self.session and not api.auth_request then self.session:ensure(self) end
+    local rsp = self:_send(api, timeout)
+    if self.session and not api.auth_request and self.session.invalid(rsp.code) then
+        self.session:recover(self, api:path())
+        if api.retry_after_auth then rsp = self:_send(api, timeout) end
     end
+    if not api.no_error_check then error.check(rsp) end
     return rsp
 end
 
 function Client:perform_queue(next, timeout)
-    local limit = 12
-    local batch = get_http_client():new_batch { results = 'response', limit = limit }
-    local results, pending = {}, {}
-    local count, sequence, ended = 0, 0, false
+    if self.session then self.session:ensure(self) end
+    local batch = get_http_client():new_batch {results = 'response', limit = 12}
+    local results, pending, sequence, count, ended = {}, {}, 0, 0, false
     local ok, failure = pcall(function()
         while true do
-            while not ended and count < limit do
+            while not ended and count < 12 do
                 local api = next()
-                if not api then
-                    ended = true
-                    batch:seal()
-                    break
-                end
+                if not api then ended = true; batch:seal(); break end
                 sequence = sequence + 1
                 local key = tostring(sequence)
+                local generation = self.session and self.session.generation
                 batch:add(key, self:_req_build(api, timeout):build())
-                pending[key] = api
-                count = count + 1
+                pending[key], count = {api = api, generation = generation}, count + 1
             end
             local completed = batch:wait_one()
             if not completed then break end
-            local api = assert(pending[completed.key], 'unknown batch key')
+            local entry = assert(pending[completed.key], 'unknown batch key')
             pending[completed.key], count = nil, count - 1
-            if completed.error then _G.error(completed.error) end
-            local response = api:parse_response(completed.response)
-            if not api.no_error_check then error.check(response) end
-            results[#results + 1] = response
+            if completed.error then _G.error(completed.error, 0) end
+            local rsp = self:_response(entry.api, completed.response, entry.generation)
+            if self.session and self.session.invalid(rsp.code) then
+                self.session:recover(self, entry.api:path())
+                if entry.api.retry_after_auth then rsp = self:_send(entry.api, timeout) end
+            end
+            if not entry.api.no_error_check then error.check(rsp) end
+            results[#results + 1] = rsp
         end
     end)
     batch:close()
-    if not ok then _G.error(failure) end
+    if not ok then _G.error(failure, 0) end
     return results
 end
 

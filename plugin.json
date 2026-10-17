@@ -9,6 +9,7 @@
     ],
     "requires": [
         "http.batch.response.v1",
-        "http.response.v1"
+        "http.response.v1",
+        "provider.session.v1"
     ]
 }

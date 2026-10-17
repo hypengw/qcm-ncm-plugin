@@ -1,4 +1,4 @@
-local M = {}
+local M = {retry_after_auth = true}
 M.__index = M
 
 function M.new(id, limit, offset, work_type, order)

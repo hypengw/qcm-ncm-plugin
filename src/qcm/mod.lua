@@ -1,12 +1,18 @@
 ---@class QcmInner
 ---@field id integer? provider id
 ---@field device_id fun(self: QcmInner): string
+---@field begin_session fun(self: QcmInner)
+---@field new_session_id fun(self: QcmInner): string
+---@field save_session fun(self: QcmInner): 'staged'|'saved'
+---@field session_task fun(self: QcmInner, key: string, task: fun():any): any
 
 ---@class QcmResponse
 ---@field status fun(self: QcmResponse): integer
 ---@field json fun(self: QcmResponse): any
 ---@field text fun(self: QcmResponse): string
 ---@field headers fun(self: QcmResponse): table<string,string>
+---@field url fun(self: QcmResponse): string
+---@field header_values fun(self: QcmResponse, name: string): string[]
 ---@field close fun(self: QcmResponse)
 
 ---@class QcmRequestBuilder

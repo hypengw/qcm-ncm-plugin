@@ -89,7 +89,7 @@
 ---@field size number Number of tracks
 ---@field artists AlbumArtist
 
-local M = {}
+local M = {retry_after_auth = true}
 M.__index = M
 
 local crypto = require("crypto")

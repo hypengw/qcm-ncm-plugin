@@ -1,5 +1,5 @@
 
-local M = {}
+local M = {retry_after_auth = true}
 M.__index = M
 
 ---@class ArtistHeadInfo
