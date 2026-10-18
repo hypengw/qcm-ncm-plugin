@@ -5,6 +5,19 @@ local CategoryRadio = require('category_radio')
 local M = {}
 M.__index = M
 
+function M.personal_entries()
+    return {
+        {native_id = 'roaming/fm', name = '私人漫游', description = '沿着目前喜好继续聆听'},
+        {native_id = 'roaming/similar', name = '相似歌曲', description = '从喜欢的歌曲发现相似推荐'},
+    }
+end
+
+function M.entries()
+    local entries = M.personal_entries()
+    for _, entry in ipairs(CategoryRadio.entries()) do entries[#entries + 1] = entry end
+    return entries
+end
+
 function M.new(client, user_id, provider_id)
     return setmetatable({client = client, user_id = user_id, provider_id = provider_id}, M)
 end
