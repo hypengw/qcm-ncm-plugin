@@ -468,25 +468,27 @@ function M:sync_artists(ctx, artist_collect, library_id)
     local models = {}
     local rsps = self.client:perform_queue(next_, 30) --[[@as table<ArtistHeadResponse>]]
     for _, v in ipairs(rsps) do
-        local item = v.data.artist --[[@as ArtistHeadInfo]]
-        table.insert(models, {
-            id          = -1,
-            item        = {
+        local item = v.artist
+        if item then
+            table.insert(models, {
+                id          = -1,
+                item        = {
+                    id         = -1,
+                    library_id = library_id,
+                    native_id  = tostring(item.id),
+                    type       = 'Artist'
+                },
+                name        = item.name,
+                description = item.briefDesc or '',
+                _native_id  = item.id
+            } --[[@as QcmArtistModel]])
+            table.insert(images, {
                 id         = -1,
-                library_id = library_id,
-                native_id  = tostring(item.id),
-                type       = 'Artist'
-            },
-            name        = item.name,
-            description = item.briefDesc or '',
-            _native_id  = item.id
-        } --[[@as QcmArtistModel]])
-        table.insert(images, {
-            id         = -1,
-            item_id    = -1,
-            native_id  = item.avatar ~= nil and util.extract_image_id(item.avatar) or nil,
-            image_type = 'Primary',
-        } --[[@as QcmImageModel]])
+                item_id    = -1,
+                native_id  = item.avatar ~= nil and util.extract_image_id(item.avatar) or nil,
+                image_type = 'Primary',
+            } --[[@as QcmImageModel]])
+        end
     end
     local ids = ctx:allocate_items(fun.iter(models):map(function(v) return v.item end):totable())
     for i, id in ipairs(ids) do

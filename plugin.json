@@ -10,6 +10,8 @@
     "requires": [
         "http.batch.response.v1",
         "http.response.v1",
-        "provider.session.v1"
+        "provider.session.v1",
+        "radio.configuration.v1",
+        "radio.lifecycle.v1"
     ]
 }

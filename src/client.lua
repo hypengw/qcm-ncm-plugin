@@ -8,6 +8,7 @@ local BASE_URL = 'https://music.163.com'
 
 ---@class Api
 ---@field no_error_check? boolean
+---@field accepted_codes? table<integer, boolean>
 ---@field base? fun(): string
 ---@field operation fun(): string
 ---@field crypto fun(): string
@@ -33,6 +34,11 @@ end
 ---@field device_params_cookie string Formatted device parameters as cookie string
 local Client = {}
 Client.__index = Client
+
+local function check_response(api, response)
+    if api.no_error_check or (api.accepted_codes and api.accepted_codes[response.code]) then return end
+    error.check(response)
+end
 
 function Client.new(device_id, session)
     local self = setmetatable({}, Client)
@@ -122,7 +128,7 @@ function Client:perform(api, timeout)
         self.session:recover(self, api:path())
         if api.retry_after_auth then rsp = self:_send(api, timeout) end
     end
-    if not api.no_error_check then error.check(rsp) end
+    check_response(api, rsp)
     return rsp
 end
 
@@ -151,7 +157,7 @@ function Client:perform_queue(next, timeout)
                 self.session:recover(self, entry.api:path())
                 if entry.api.retry_after_auth then rsp = self:_send(entry.api, timeout) end
             end
-            if not entry.api.no_error_check then error.check(rsp) end
+            check_response(entry.api, rsp)
             results[#results + 1] = rsp
         end
     end)

@@ -1,5 +1,5 @@
 
-local M = {retry_after_auth = true}
+local M = {retry_after_auth = true, accepted_codes = {[404] = true}}
 M.__index = M
 
 ---@class ArtistHeadInfo
@@ -29,7 +29,8 @@ M.__index = M
 
 
 ---@class ArtistHeadResponse
----@field data ArtistHeadData
+---@field data? ArtistHeadData
+---@field artist? ArtistHeadInfo Absent for a not-found response
 ---@field code integer
 ---@field message string
 
@@ -63,8 +64,15 @@ function M:body()
 end
 
 function M:parse_response(response)
-    local data = response:json()
-    return data
+    local result = response:json()
+    result.artist = nil
+    if result.code == 200 then
+        local artist = result.data and result.data.artist
+        assert(type(artist) == 'table' and math.type(artist.id) == 'integer' and artist.id > 0
+            and type(artist.name) == 'string', 'invalid artist head response')
+        result.artist = artist
+    end
+    return result
 end
 
 return M

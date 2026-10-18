@@ -1,8 +1,12 @@
 local M = {retry_after_auth = true}
 M.__index = M
 
-function M.new()
+function M.new(options)
     local self = setmetatable({}, M)
+    options = options or {}
+    self.mode = options.mode or 'DEFAULT'
+    self.source_id = options.source_id
+    assert(self.mode ~= 'SIMILAR' or (type(self.source_id) == 'string' and self.source_id:match('^%d+$')), 'similar radio requires a source')
     return self
 end
 
@@ -23,7 +27,14 @@ function M:query()
 end
 
 function M:body()
-    return {}
+    local body = {mode = self.mode, limit = 3}
+    if self.mode == 'SIMILAR' then
+        body.sourceType = 'song'
+        body.sourceIds = self.source_id
+    else
+        body.subMode = ''
+    end
+    return body
 end
 
 function M:parse_response(response)

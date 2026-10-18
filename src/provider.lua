@@ -13,6 +13,8 @@ local load_error
 local ItemType = qcm.enum.ItemType
 local SyncState = qcm.enum.SyncState
 local DAILY_MIX_NATIVE_ID = "recommend/daily"
+local roaming = require('roaming')
+local Radio = require('radio')
 
 local status = {
     user_id = -1,
@@ -163,7 +165,8 @@ function provider.sync(ctx)
     sync:sync_daily_mix(ctx, library_id, DAILY_MIX_NATIVE_ID)
     sync:sync_mixes(ctx, library_id)
     ctx:sync_radio_queues({
-        { native_id = "roaming/fm", name = "私人漫游", description = "私人 FM 模式" },
+        { native_id = "roaming/fm", name = "私人漫游", description = "沿着目前喜好继续聆听" },
+        { native_id = "roaming/similar", name = "相似歌曲", description = "从喜欢的歌曲发现相似推荐" },
     })
 end
 
@@ -178,35 +181,20 @@ function provider.sync_item(ctx, item)
     end
 end
 
-function provider.get_queue_next(ctx, native_id, current_native_ids)
-    local libs = ctx:libraries()
-    local library_id = -1
-    if #libs > 0 then
-        library_id = libs[1].library_id
-    end
-    local sync = require("sync").new(client, status.user_id, inner.id)
+function provider.queue_configuration(ctx, native_id)
+    return roaming.configuration(native_id)
+end
 
-    if native_id == "roaming/fm" then
-        local api = require('api.v1.radio.get').new()
-        local rsp = client:perform(api, 30)
+function provider.queue_definition(ctx, native_id)
+    return Radio.definition(native_id)
+end
 
-        if rsp.code == 200 and rsp.data then
-            local songs = sync:sync_songs(ctx, library_id, rsp.data)
-            return songs
-        end
-    else
-        local seed_id = native_id:match("^roaming/(%d+)$")
-        if seed_id == nil then
-            return {}
-        end
-        local current_native_id = current_native_ids[#current_native_ids] or seed_id
-        local api = require('api.v1.playmode.song.playlist').new(seed_id, current_native_id, 3)
-        local rsp = client:perform(api, 30)
-        if rsp.code == 200 and rsp.data and rsp.data.list then
-            return sync:sync_songs(ctx, library_id, rsp.data.list)
-        end
-    end
-    return {}
+function provider.open_queue(ctx, native_id, request)
+    return Radio.new(client, status.user_id, inner.id):open(ctx, native_id, request)
+end
+
+function provider.next_queue(ctx, native_id, request)
+    return Radio.new(client, status.user_id, inner.id):next(ctx, native_id, request)
 end
 
 ---@param ctx any
