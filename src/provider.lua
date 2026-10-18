@@ -15,6 +15,7 @@ local SyncState = qcm.enum.SyncState
 local DAILY_MIX_NATIVE_ID = "recommend/daily"
 local roaming = require('roaming')
 local Radio = require('radio')
+local CategoryRadio = require('category_radio')
 
 local status = {
     user_id = -1,
@@ -164,10 +165,12 @@ function provider.sync(ctx)
     sync:sync_artists(ctx, artist_collect, library_id)
     sync:sync_daily_mix(ctx, library_id, DAILY_MIX_NATIVE_ID)
     sync:sync_mixes(ctx, library_id)
-    ctx:sync_radio_queues({
+    local radios = {
         { native_id = "roaming/fm", name = "私人漫游", description = "沿着目前喜好继续聆听" },
         { native_id = "roaming/similar", name = "相似歌曲", description = "从喜欢的歌曲发现相似推荐" },
-    })
+    }
+    for _, entry in ipairs(CategoryRadio.entries()) do radios[#radios + 1] = entry end
+    ctx:sync_radio_queues(radios)
 end
 
 function provider.sync_item(ctx, item)

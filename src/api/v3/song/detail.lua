@@ -2,6 +2,7 @@ local M = {retry_after_auth = true}
 M.__index = M
 
 local json = require('json')
+local util = require('util')
 
 function M.new(ids)
     local self = setmetatable({}, M)
@@ -36,7 +37,18 @@ function M:body()
 end
 
 function M:parse_response(response)
-    return response:json()
+    local result = response:json()
+    if result.code == 200 then
+        local songs_by_id = {}
+        for _, song in ipairs(util.array(result.songs)) do
+            assert(type(song) == 'table', 'invalid song detail')
+            local id = util.positive_id(song.id)
+            assert(not songs_by_id[id], 'duplicate song detail')
+            songs_by_id[id] = song
+        end
+        result.songs_by_id = songs_by_id
+    end
+    return result
 end
 
 return M
