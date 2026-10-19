@@ -15,18 +15,18 @@ local ctx = setmetatable({libraries = function() return {{library_id = 9}} end},
     __index = function(_, key) error('unexpected metadata context method ' .. key) end,
 })
 local entries = provider.for_you_items(ctx)
-assert(#entries == 3 and calls == 0)
+assert(#entries == 4 and calls == 0)
 assert(entries[1].entry_key == 'daily' and entries[1].target.native_id == 'recommend/daily')
 assert(entries[1].target.library_id == 9 and entries[1].target.type == 'Mix')
 assert(entries[1].primary_action == 'OpenItem' and entries[1].play_action == 'PlayItem')
 local radios = require('radio').entries()
-assert(#radios == 9)
-for i = 2, 3 do
+assert(#radios == 10 and radios[3].native_id == 'heart/liked' and radios[3].name == '心动模式')
+for i = 2, 4 do
     local entry = entries[i]
     assert(entry.target.native_id == radios[i-1].native_id and entry.target.library_id == null)
     assert(entry.presentation.style == 'Radio' and entry.presentation.cover.type == 'RadioCurrent')
     assert(entry.primary_action == 'ActivateRadio' and entry.play_action == 'ActivateRadio')
 end
 ctx.libraries = function() return {} end
-assert(#provider.for_you_items(ctx) == 2 and calls == 0)
+assert(#provider.for_you_items(ctx) == 3 and calls == 0)
 print('for_you: metadata, identities, order and actions passed')

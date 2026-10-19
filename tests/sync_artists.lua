@@ -147,13 +147,14 @@ test('missing artist does not stop later sync or misalign relations', function()
     assert(#ctx.saved.sync_album_artist_ids == 1 and ctx.saved.sync_album_artist_ids[1].artist_id == id)
     assert(#ctx.saved.sync_song_artist_ids == 1 and ctx.saved.sync_song_artist_ids[1].artist_id == id)
     local queues = ctx.saved.sync_radio_queues
-    assert(#queues == 9 and queues[1].native_id == 'roaming/fm' and queues[2].native_id == 'roaming/similar')
+    assert(#queues == 10 and queues[1].native_id == 'roaming/fm' and queues[2].native_id == 'roaming/similar'
+        and queues[3].native_id == 'heart/liked')
 end)
 test('all artists missing still reaches radio sync', function()
     bodies[12] = {code = 404}
     local ctx, ok, err = sync(); assert(ok, err)
     assert(#ctx.saved.sync_artists == 0 and #ctx.saved.sync_album_artist_ids == 0 and #ctx.saved.sync_song_artist_ids == 0)
-    assert(#ctx.saved.sync_radio_queues == 9)
+    assert(#ctx.saved.sync_radio_queues == 10)
 end)
 test('artist business failure remains fatal', function()
     bodies[11] = {code = 500, message = 'server failed'}

@@ -739,8 +739,22 @@ end
 function M:sync_mix(ctx, item)
     local library_id = item.library_id
 
-    local api = require('api.v6.playlist.detail').new(tonumber(item.native_id))
+    local api = require('api.v6.playlist.detail').new(item.native_id)
     local rsp = self.client:perform(api, 30)
+    local track_ids = util.array(rsp.track_ids)
+    local missing = {}
+    for _, id in ipairs(track_ids) do
+        if not rsp.songs_by_id[id] then missing[#missing + 1] = id end
+    end
+    local fetched = {}
+    if #missing > 0 then
+        fetched = self.client:perform(require('api.v3.song.detail').new(missing), 30).songs_by_id
+    end
+    local mix_songs = {}
+    for _, id in ipairs(track_ids) do
+        local song = rsp.songs_by_id[id] or fetched[id]
+        if song then mix_songs[#mix_songs + 1] = song end
+    end
 
     local mix_id = nil
 
@@ -771,19 +785,6 @@ function M:sync_mix(ctx, item)
             mix_id = id
         end
         ctx:sync_remote_mixes(mixes, { exclude = { 'mix_type' } })
-    end
-
-    local mix_songs = rsp.playlist.tracks or {}
-
-    if #mix_songs ~= #rsp.playlist.trackIds then
-        local ids = {}
-        for _, v in ipairs(rsp.playlist.trackIds) do
-            table.insert(ids, v.id)
-        end
-        local api = require('api.v3.song.detail').new(ids)
-
-        local rsp = self.client:perform(api, 30)
-        mix_songs = rsp.songs or {}
     end
 
     local songs = self:sync_songs_internal(ctx, library_id, mix_songs)

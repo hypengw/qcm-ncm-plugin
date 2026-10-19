@@ -36,18 +36,20 @@ function M:body()
     }
 end
 
+function M.index(songs)
+    local songs_by_id = {}
+    for _, song in ipairs(util.array(songs)) do
+        assert(type(song) == 'table', 'invalid song detail')
+        local id = util.positive_id(song.id)
+        assert(not songs_by_id[id], 'duplicate song detail')
+        songs_by_id[id] = song
+    end
+    return songs_by_id
+end
+
 function M:parse_response(response)
     local result = response:json()
-    if result.code == 200 then
-        local songs_by_id = {}
-        for _, song in ipairs(util.array(result.songs)) do
-            assert(type(song) == 'table', 'invalid song detail')
-            local id = util.positive_id(song.id)
-            assert(not songs_by_id[id], 'duplicate song detail')
-            songs_by_id[id] = song
-        end
-        result.songs_by_id = songs_by_id
-    end
+    if result.code == 200 then result.songs_by_id = M.index(result.songs) end
     return result
 end
 

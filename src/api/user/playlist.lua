@@ -1,3 +1,5 @@
+local util = require('util')
+local qcm = require('qcm.mod')
 local M = {retry_after_auth = true}
 M.__index = M
 
@@ -40,6 +42,26 @@ end
 
 function M:parse_response(response)
     local data = response:json()
+    if data.code == 200 then
+        data.liked_playlist = nil
+        assert(data.more == nil or type(data.more) == 'boolean', 'invalid user playlist pagination')
+        data.has_more = data.more == true
+        for _, playlist in ipairs(util.array(data.playlist)) do
+            assert(type(playlist) == 'table', 'invalid user playlist')
+            if playlist.specialType == 5 then
+                local owner = playlist.userId
+                if owner == nil or owner == qcm.null then
+                    owner = type(playlist.creator) == 'table' and playlist.creator.userId or nil
+                end
+                if owner ~= nil and owner ~= qcm.null and util.positive_id(owner) == util.positive_id(self.uid) then
+                    assert(data.liked_playlist == nil, 'duplicate liked playlist')
+                    data.liked_playlist = {native_id = util.positive_id(playlist.id)}
+                end
+            end
+        end
+        data.next_offset = self.offset + #data.playlist
+        assert(not data.has_more or data.next_offset > self.offset, 'empty user playlist page')
+    end
     return data
 end
 

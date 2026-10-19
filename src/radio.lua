@@ -2,6 +2,7 @@ local json = require('json')
 local roaming = require('roaming')
 local RadioGet = require('api.v1.radio.get')
 local CategoryRadio = require('category_radio')
+local HeartRadio = require('heart_radio')
 local M = {}
 M.__index = M
 
@@ -9,6 +10,7 @@ function M.personal_entries()
     return {
         {native_id = 'roaming/fm', name = '私人漫游', description = '沿着目前喜好继续聆听'},
         {native_id = 'roaming/similar', name = '相似歌曲', description = '从喜欢的歌曲发现相似推荐'},
+        HeartRadio.entry(),
     }
 end
 
@@ -43,6 +45,7 @@ local function restore(value, expected)
 end
 
 function M.definition(native_id)
+    if HeartRadio.resolve(native_id) then return HeartRadio.definition() end
     if CategoryRadio.resolve(native_id) then return CategoryRadio.definition() end
     local radio_kind = kind(native_id)
     return {configuration = radio_kind == 'fm' and roaming.configuration(native_id) or {}, can_restart = true,
@@ -85,6 +88,9 @@ function M:source(ctx, sync, library_id, source_id)
 end
 
 function M:open(ctx, native_id, request)
+    if HeartRadio.resolve(native_id) then
+        return HeartRadio.new(self.client, self.user_id, self.provider_id):open(ctx, request)
+    end
     local category = CategoryRadio.resolve(native_id)
     if category then
         return CategoryRadio.new(self.client, self.user_id, self.provider_id, category):open(ctx, request)
@@ -151,6 +157,9 @@ function M:open(ctx, native_id, request)
 end
 
 function M:next(ctx, native_id, request)
+    if HeartRadio.resolve(native_id) then
+        return HeartRadio.new(self.client, self.user_id, self.provider_id):next(ctx, request)
+    end
     local category = CategoryRadio.resolve(native_id)
     if category then
         return CategoryRadio.new(self.client, self.user_id, self.provider_id, category):next(ctx, request)
