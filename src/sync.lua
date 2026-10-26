@@ -725,12 +725,24 @@ function M:sync_songs_internal(ctx, library_id, mix_songs)
         end
         song_ids = ctx:allocate_items(items)
         local out_songs = {}
+        local artist_collect, song_artists = {}, {}
         for i, id in ipairs(song_ids) do
             songs[i].id = id
             table.insert(out_songs, songs[i])
+            local seen = song_artists[id] or {}
+            song_artists[id] = seen
+            for _, artist in ipairs(mix_songs[i].ar or mix_songs[i].artists or {}) do
+                local native_id = tonumber(artist.id)
+                if math.type(native_id) == 'integer' and native_id > 0 and not seen[native_id] then
+                    seen[native_id] = true
+                    local collected = check_artists_collect(artist_collect, native_id)
+                    table.insert(collected.song_ids, id)
+                end
+            end
         end
         ctx:sync_songs(songs)
         ctx:sync_images(images)
+        if next(artist_collect) then self:sync_artists(ctx, artist_collect, library_id) end
         return out_songs
     end
 end

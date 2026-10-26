@@ -1,6 +1,7 @@
 package.path = 'src/?.lua;' .. package.path
 
-local bodies, requests, batches, responses, transport_id, other_code
+local bodies, requests, batches, responses, transport_id, other_code, radio_songs, song_details
+local radio_responses
 local function copy(value)
     if type(value) ~= 'table' then return value end
     local out = {}
@@ -8,9 +9,11 @@ local function copy(value)
     return out
 end
 local function dispatch(path, body)
+    if radio_responses[path] then return copy(radio_responses[path]) end
     if path == '/nuser/account/get' then return {code = 200, profile = {userId = 42, nickname = 'test'}} end
     if path == '/song/like/get' then return {code = other_code or 200, ids = {}} end
-    if path == '/v3/song/detail' then return {code = 200, songs = {}} end
+    if path == '/v3/song/detail' then return {code = 200, songs = copy(song_details)} end
+    if path == '/v1/radio/get' then return {code = 200, data = copy(radio_songs)} end
     if path == '/album/sublist' then
         return {code = 200, data = {{id = 10, name = 'album', subTime = 1}}, hasMore = false}
     end
@@ -71,13 +74,15 @@ package.preload['qcm.mod'] = function()
             new_session_id = function() return 'scope' end, save_session = function() return 'saved' end,
             session_task = function(_, _, callback) return callback() end},
         error = function(value) error(value, 0) end,
+        debug = function() end,
         errors = {inspect = function(value) return type(value) == 'table' and value or nil end},
         time = {now = function() return 1000000 end}, crypto = {},
         enum = {ItemType = {}, SyncState = {NotAuth = 1}}, get_http_client = function() return http end,
     }
 end
 package.preload.json = function()
-    return {encode = function(value) return value end, decode = function() return {user_id = 42} end}
+    return {encode = function(value) return copy(value) end,
+        decode = function(value) return type(value) == 'table' and copy(value) or {user_id = 42} end}
 end
 package.preload.crypto = function()
     return {weapi = function(value) return value end, eapi = function(_, value) return value end,
@@ -88,9 +93,11 @@ local function reset()
     bodies = {[11] = {code = 404, message = '无相关艺人'},
         [12] = {code = 200, data = {artist = {id = 12, name = 'available', avatar = 'https://image.invalid/12.jpg'}}}}
     requests, batches, responses, transport_id, other_code = {}, {}, {}, nil, nil
+    radio_songs, song_details, radio_responses = {}, {}, {}
 end
 local function context()
     local ctx = {saved = {}, calls = {}, ids = {}, next_id = 1000}
+    function ctx:libraries() return {{library_id = 9}} end
     function ctx:sync_libraries(libraries) assert(libraries[1].native_id == '42'); return {9} end
     function ctx:allocate_items(items)
         local ids = {}
@@ -191,5 +198,150 @@ test('unrelated APIs still reject 404 in single and batch requests', function()
         local value = next_api; next_api = nil; return value
     end, 30))
     assert(batches[1].closed)
+end)
+local function song(id, artists, legacy)
+    local value = {id = id, name = 'song ' .. id, dt = 180000, no = 1,
+        al = {id = 10, name = 'album', picId = 99}, ar = artists}
+    if legacy then
+        value.album, value.al = value.al, nil
+        value.artists, value.ar = value.ar, nil
+        value.duration, value.dt = value.dt, nil
+    end
+    return value
+end
+local function artist_requests()
+    local counts = {}
+    for _, request in ipairs(requests) do
+        if request.url:match('/artist/head/info/get$') then
+            local id = request.form_value.id
+            counts[id] = (counts[id] or 0) + 1
+        end
+    end
+    return counts
+end
+test('dynamic songs sync artists once per batch and retain every song relation', function()
+    bodies[11] = {code = 200, data = {artist = {id = 11, name = 'first', briefDesc = 'description'}}}
+    local ctx = context()
+    local operator = require('sync').new(require('client').new('test'), 42, 7)
+    local input = {song(101, {{id = 11}, {id = 12}, {id = 11}, {id = 0}, {}}),
+        song(102, {{id = '12'}, {id = 11}}, true), song(103), song(101, {{id = 11}})}
+    local songs = operator:sync_songs(ctx, 9, input)
+    assert(#songs == 4 and songs[1].item.native_id == '101' and songs[2].duration == 180000)
+    assert(songs[4].id == songs[1].id)
+    assert(#ctx.saved.sync_artists == 2 and not ctx.ids['Artist/0'])
+    local counts = artist_requests()
+    assert(counts[11] == 1 and counts[12] == 1)
+    local expected = {}
+    for _, song_id in ipairs{101, 102} do
+        for _, artist_id in ipairs{11, 12} do
+            expected[ctx.ids['Song/' .. song_id] .. '/' .. ctx.ids['Artist/' .. artist_id]] = true
+        end
+    end
+    assert(#ctx.saved.sync_song_artist_ids == 4)
+    for _, relation in ipairs(ctx.saved.sync_song_artist_ids) do
+        local key = relation.song_id .. '/' .. relation.artist_id
+        assert(expected[key], 'duplicate or incorrect song artist relation')
+        expected[key] = nil
+    end
+    assert(next(expected) == nil and #ctx.saved.sync_album_artist_ids == 0)
+    for _, artist in ipairs(ctx.saved.sync_artists) do
+        if artist.item.native_id == '11' then assert(artist.description == 'description') end
+    end
+    local repeated = operator:sync_songs(ctx, 9, input)
+    for index, value in ipairs(repeated) do assert(value.id == songs[index].id) end
+    assert(#ctx.saved.sync_song_artist_ids == 4)
+end)
+test('dynamic songs without valid artists do not request artist details', function()
+    local ctx = context()
+    local operator = require('sync').new(require('client').new('test'), 42, 7)
+    local songs = operator:sync_songs(ctx, 9, {song(101, {{id = 0}, {id = -1}, {id = 1.5}, {}}), song(102)})
+    assert(#songs == 2 and #requests == 0 and #batches == 0)
+    assert(ctx.saved.sync_artists == nil and ctx.saved.sync_song_artist_ids == nil)
+end)
+test('dynamic artist IDs retain integer precision', function()
+    local id = 9007199254740993
+    bodies[id] = {code = 200, data = {artist = {id = id, name = 'large ID'}}}
+    local ctx = context()
+    local operator = require('sync').new(require('client').new('test'), 42, 7)
+    local songs = operator:sync_songs(ctx, 9, {song(101, {{id = id}, {id = tostring(id)}})})
+    assert(artist_requests()[id] == 1 and ctx.ids['Artist/9007199254740993'])
+    assert(#ctx.saved.sync_song_artist_ids == 1)
+    assert(ctx.saved.sync_song_artist_ids[1].song_id == songs[1].id)
+    assert(ctx.saved.sync_song_artist_ids[1].artist_id == ctx.ids['Artist/9007199254740993'])
+end)
+test('missing dynamic artist does not misalign song relations', function()
+    local ctx = context()
+    local operator = require('sync').new(require('client').new('test'), 42, 7)
+    local songs = operator:sync_songs(ctx, 9, {song(101, {{id = 11}}), song(102, {{id = 12}}, true)})
+    assert(#songs == 2 and not ctx.ids['Artist/11'] and ctx.ids['Artist/12'])
+    assert(#ctx.saved.sync_song_artist_ids == 1)
+    local relation = ctx.saved.sync_song_artist_ids[1]
+    assert(relation.song_id == songs[2].id and relation.artist_id == ctx.ids['Artist/12'])
+    for _, batch in ipairs(batches) do assert(batch.closed) end
+    for _, response in ipairs(responses) do assert(response.closed and response.reads == 1) end
+end)
+test('private roaming and similar radio persist artists before returning songs', function()
+    local provider = dofile('src/provider.lua')
+    provider.load('account')
+    local ctx = context()
+    radio_songs = {song(101, {{id = 12}}, true)}
+    local first = provider.open_queue(ctx, 'roaming/fm', {configuration = {}, reason = 'Initial'})
+    assert(#first.songs == 1 and ctx.ids['Artist/12'])
+    assert(ctx.saved.sync_song_artist_ids[1].song_id == first.songs[1].id)
+    bodies[11] = {code = 200, data = {artist = {id = 11, name = 'next artist'}}}
+    radio_songs = {song(102, {{id = 11}})}
+    local following = provider.next_queue(ctx, 'roaming/fm', {state = first.state, current_native_ids = {'101'}})
+    assert(#following.songs == 1 and ctx.ids['Artist/11'])
+    assert(ctx.saved.sync_song_artist_ids[1].artist_id == ctx.ids['Artist/11'])
+    assert(ctx.saved.sync_song_artist_ids[1].song_id == following.songs[1].id)
+    song_details = {song(201, {{id = 12}})}
+    radio_songs = {song(103, {{id = 12}}, true)}
+    local similar = provider.open_queue(ctx, 'roaming/similar', {configuration = {}, reason = 'Initial',
+        input = {item_type = 'Song', native_id = '201'}})
+    assert(similar.presentation.source_item_id == ctx.ids['Song/201'])
+    assert(ctx.saved.sync_song_artist_ids[1].song_id == similar.songs[1].id)
+    assert(ctx.saved.sync_song_artist_ids[1].artist_id == ctx.ids['Artist/12'])
+    assert(#ctx.calls.sync_artists == 4 and #ctx.saved.sync_album_artist_ids == 0)
+    for _, batch in ipairs(batches) do assert(batch.closed) end
+    for _, response in ipairs(responses) do assert(response.closed and response.reads == 1) end
+end)
+test('category radio persists artists on open and next batches', function()
+    local provider = dofile('src/provider.lua')
+    provider.load('account')
+    local ctx = context()
+    radio_responses['/tag/tab/fm/recommends'] = {code = 200, data = {{id = 101}, {id = 102}}}
+    song_details = {song(102, {{id = 12}}), song(101, {{id = 12}})}
+    local first = provider.open_queue(ctx, 'category/rap', {configuration = {}, reason = 'Initial'})
+    assert(#first.songs == 2 and first.songs[1].item.native_id == '101')
+    assert(artist_requests()[12] == 1 and #ctx.saved.sync_song_artist_ids == 2)
+    for _, relation in ipairs(ctx.saved.sync_song_artist_ids) do
+        assert(relation.artist_id == ctx.ids['Artist/12'])
+    end
+    bodies[11] = {code = 200, data = {artist = {id = 11, name = 'next artist'}}}
+    radio_responses['/tag/tab/fm/recommends'].data = {{id = 103}}
+    song_details = {song(103, {{id = 11}})}
+    local following = provider.next_queue(ctx, 'category/rap', {state = first.state,
+        current_native_ids = {'101', '102'}})
+    assert(#following.songs == 1 and following.songs[1].item.native_id == '103')
+    assert(ctx.saved.sync_song_artist_ids[1].artist_id == ctx.ids['Artist/11'])
+    assert(ctx.saved.sync_song_artist_ids[1].song_id == following.songs[1].id)
+end)
+test('heart radio persists seed and recommended song artists', function()
+    local provider = dofile('src/provider.lua')
+    provider.load('account')
+    local ctx = context()
+    radio_responses['/user/playlist'] = {code = 200, playlist = {{id = 10, specialType = 5, userId = 42}}, more = false}
+    radio_responses['/v6/playlist/detail'] = {code = 200, playlist = {id = 10,
+        trackIds = {{id = 201}}, tracks = {song(201, {{id = 12}})}}}
+    radio_responses['/playmode/intelligence/list'] = {code = 200,
+        data = {{id = 101, songInfo = song(101, {{id = 12}}), recommended = true}}}
+    local result = provider.open_queue(ctx, 'heart/liked', {configuration = {}, reason = 'Initial'})
+    assert(#result.songs == 2 and result.exhausted and artist_requests()[12] == 1)
+    assert(result.songs[1].item.native_id == '201' and result.songs[2].item.native_id == '101')
+    assert(#ctx.saved.sync_song_artist_ids == 2)
+    for _, relation in ipairs(ctx.saved.sync_song_artist_ids) do
+        assert(relation.artist_id == ctx.ids['Artist/12'])
+    end
+    assert(#ctx.saved.sync_album_artist_ids == 0)
 end)
 print(passed .. ' artist sync tests passed')
