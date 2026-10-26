@@ -117,7 +117,9 @@ local function context()
             table.insert(self.calls[name], copy(value))
         end
     end
-    function ctx:sync_remote_mix_song_ids() end
+    function ctx:sync_remote_mix_song_ids(mix_id, song_ids)
+        self.saved.sync_remote_mix_song_ids = {mix_id = mix_id, song_ids = copy(song_ids)}
+    end
     function ctx:commit_artist() end
     function ctx:commit_album() end
     function ctx:commit_song() end
@@ -343,5 +345,84 @@ test('heart radio persists seed and recommended song artists', function()
         assert(relation.artist_id == ctx.ids['Artist/12'])
     end
     assert(#ctx.saved.sync_album_artist_ids == 0)
+end)
+test('daily mix sync_item persists artists and ordered song membership', function()
+    local provider = dofile('src/provider.lua')
+    provider.load('account')
+    local ctx = context()
+    radio_responses['/v3/discovery/recommend/songs'] = {code = 200, data = {
+        dailySongs = {song(101, {{id = 12}}), song(102, {{id = 12}}, true)}}}
+    provider.sync_item(ctx, {type = 'Mix', library_id = 9, native_id = 'recommend/daily'})
+    local membership = ctx.saved.sync_remote_mix_song_ids
+    local mix_id = ctx.ids['Mix/recommend/daily']
+    assert(membership.mix_id == mix_id and #membership.song_ids == 2)
+    assert(membership.song_ids[1] == ctx.ids['Song/101'] and membership.song_ids[2] == ctx.ids['Song/102'])
+    assert(ctx.saved.sync_remote_mixes[1].mix_type == 'daily' and ctx.saved.sync_remote_mixes[1].track_count == 2)
+    assert(artist_requests()[12] == 1 and #ctx.saved.sync_artists == 1)
+    assert(#ctx.saved.sync_song_artist_ids == 2)
+    for _, relation in ipairs(ctx.saved.sync_song_artist_ids) do
+        assert(relation.artist_id == ctx.ids['Artist/12'])
+        assert(relation.song_id == membership.song_ids[1] or relation.song_id == membership.song_ids[2])
+    end
+    local cover_found = false
+    for _, images in ipairs(ctx.calls.sync_images) do
+        for _, image in ipairs(images) do
+            if image.item_id == mix_id then
+                assert(image.native_id == '99')
+                cover_found = true
+            end
+        end
+    end
+    assert(cover_found and #ctx.saved.sync_album_artist_ids == 0)
+    bodies[11] = {code = 200, data = {artist = {id = 11, name = 'refreshed artist'}}}
+    radio_responses['/v3/discovery/recommend/songs'].data.dailySongs = {song(103, {{id = 11}})}
+    provider.sync_item(ctx, {type = 'Mix', library_id = 9, native_id = 'recommend/daily'})
+    membership = ctx.saved.sync_remote_mix_song_ids
+    assert(membership.mix_id == mix_id and #membership.song_ids == 1)
+    assert(membership.song_ids[1] == ctx.ids['Song/103'])
+    assert(ctx.saved.sync_song_artist_ids[1].song_id == ctx.ids['Song/103'])
+    assert(ctx.saved.sync_song_artist_ids[1].artist_id == ctx.ids['Artist/11'])
+end)
+test('remote mix sync_item persists artists from inline and fetched song details', function()
+    local provider = dofile('src/provider.lua')
+    provider.load('account')
+    local ctx = context()
+    radio_responses['/v6/playlist/detail'] = {code = 200, playlist = {id = 10, name = 'remote mix', trackCount = 4,
+        trackIds = {{id = 101}, {id = 102}, {id = 103}, {id = 104}},
+        tracks = {song(103, {{id = 12}}), song(101, {{id = 11}}), song(999, {{id = 13}})}}}
+    song_details = {song(998, {{id = 14}}), song(102, {{id = 12}, {id = 12}}, true)}
+    provider.sync_item(ctx, {type = 'Mix', library_id = 9, native_id = '10'})
+    local membership = ctx.saved.sync_remote_mix_song_ids
+    assert(membership.mix_id == ctx.ids['Mix/10'] and #membership.song_ids == 3)
+    for index, id in ipairs{101, 102, 103} do assert(membership.song_ids[index] == ctx.ids['Song/' .. id]) end
+    assert(not ctx.ids['Song/104'] and not ctx.ids['Song/998'] and not ctx.ids['Song/999'])
+    local counts = artist_requests()
+    assert(counts[11] == 1 and counts[12] == 1 and not counts[13] and not counts[14])
+    assert(not ctx.ids['Artist/11'] and #ctx.saved.sync_artists == 1)
+    assert(#ctx.saved.sync_song_artist_ids == 2)
+    for _, relation in ipairs(ctx.saved.sync_song_artist_ids) do
+        assert(relation.artist_id == ctx.ids['Artist/12'])
+        assert(relation.song_id == ctx.ids['Song/102'] or relation.song_id == ctx.ids['Song/103'])
+    end
+    assert(requests[1].url:match('/v6/playlist/detail$') and requests[1].form_value.n == 10000)
+    local missing = requests[2].form_value.c
+    assert(requests[2].url:match('/v3/song/detail$') and #missing == 2)
+    assert(missing[1].id == '102' and missing[2].id == '104')
+    for _, batch in ipairs(batches) do assert(batch.closed) end
+    for _, response in ipairs(responses) do assert(response.closed and response.reads == 1) end
+end)
+test('empty dynamic mixes do not request artist details', function()
+    local provider = dofile('src/provider.lua')
+    provider.load('account')
+    radio_responses['/v6/playlist/detail'] = {code = 200, playlist = {
+        id = 10, name = 'empty', trackCount = 0, trackIds = {}, tracks = {}}}
+    for _, native_id in ipairs{'recommend/daily', '10'} do
+        local ctx = context()
+        provider.sync_item(ctx, {type = 'Mix', library_id = 9, native_id = native_id})
+        local membership = ctx.saved.sync_remote_mix_song_ids
+        assert(membership.mix_id == ctx.ids['Mix/' .. native_id] and #membership.song_ids == 0)
+        assert(ctx.saved.sync_artists == nil and ctx.saved.sync_song_artist_ids == nil)
+    end
+    assert(next(artist_requests()) == nil and #batches == 0)
 end)
 print(passed .. ' artist sync tests passed')
