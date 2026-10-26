@@ -57,6 +57,16 @@ function provider.resource_scope()
     return session:scope()
 end
 
+function provider.share_url(native_id, item_type)
+    local paths = {[ItemType.Song] = 'song', [ItemType.Album] = 'album',
+        [ItemType.Artist] = 'artist', [ItemType.Mix] = 'playlist'}
+    local path = paths[item_type]
+    if not path or type(native_id) ~= 'string' or not native_id:match('^%d+$') then return nil end
+    local id = native_id:gsub('^0+', '')
+    if id == '' then return nil end
+    return 'https://music.163.com/' .. path .. '?id=' .. id
+end
+
 function provider.check()
     if load_error then error(load_error, 0) end
     client:perform(require('api.nuser.account').new(), 30)
