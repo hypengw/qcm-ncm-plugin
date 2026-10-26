@@ -129,12 +129,16 @@ java:
 
 local M = {}
 
+function M.is_not_auth(code)
+   return code == 300 or code == 301 or code == 302 or code == 303 or code == 304
+end
+
 function M.check(rsp)
    if rsp.code == nil then
       error("Unexpected response: " .. json.encode(rsp))
    elseif rsp.code == 200 then
       return;
-   elseif rsp.code >= 300 and rsp.code <= 304 then
+   elseif M.is_not_auth(rsp.code) then
       qcm.error {code = 'not_auth'}
    end
 

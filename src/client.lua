@@ -16,6 +16,7 @@ local BASE_URL = 'https://music.163.com'
 ---@field body fun(): table
 ---@field path fun(): string
 ---@field parse_response fun(Api, any): any
+---@field auth_invalid? fun(Api, any): boolean
 
 local function formatCookie(table)
     local cookie = ''
@@ -35,8 +36,13 @@ end
 local Client = {}
 Client.__index = Client
 
+local function auth_invalid(api, response)
+    return error.is_not_auth(response.code) or (api.auth_invalid and api:auth_invalid(response))
+end
+
 local function check_response(api, response)
     if api.no_error_check or (api.accepted_codes and api.accepted_codes[response.code]) then return end
+    if api.auth_invalid and api:auth_invalid(response) then qcm.error {code = 'not_auth'} end
     error.check(response)
 end
 
@@ -117,19 +123,28 @@ end
 
 function Client:_send(api, timeout)
     local generation = self.session and self.session.generation
+    local revision = self.session and self.session.revision
     local response = self:_req_build(api, timeout):send()
-    return self:_response(api, response, generation)
+    return self:_response(api, response, generation), revision
+end
+
+function Client:_finish(api, rsp, revision, timeout)
+    if self.session and not api.auth_request and auth_invalid(api, rsp) then
+        self.session:recover(self, api:path(), revision)
+        if api.retry_after_auth then rsp = self:_send(api, timeout) end
+        if auth_invalid(api, rsp) then
+            qcm.debug {component = 'ncm.session', event = 'auth_rejected', path = api:path(),
+                code = rsp.code, retried = api.retry_after_auth == true}
+        end
+    end
+    check_response(api, rsp)
+    return rsp
 end
 
 function Client:perform(api, timeout)
     if self.session and not api.auth_request then self.session:ensure(self) end
-    local rsp = self:_send(api, timeout)
-    if self.session and not api.auth_request and self.session.invalid(rsp.code) then
-        self.session:recover(self, api:path())
-        if api.retry_after_auth then rsp = self:_send(api, timeout) end
-    end
-    check_response(api, rsp)
-    return rsp
+    local rsp, revision = self:_send(api, timeout)
+    return self:_finish(api, rsp, revision, timeout)
 end
 
 function Client:perform_queue(next, timeout)
@@ -144,8 +159,9 @@ function Client:perform_queue(next, timeout)
                 sequence = sequence + 1
                 local key = tostring(sequence)
                 local generation = self.session and self.session.generation
+                local revision = self.session and self.session.revision
                 batch:add(key, self:_req_build(api, timeout):build())
-                pending[key], count = {api = api, generation = generation}, count + 1
+                pending[key], count = {api = api, generation = generation, revision = revision}, count + 1
             end
             local completed = batch:wait_one()
             if not completed then break end
@@ -153,11 +169,7 @@ function Client:perform_queue(next, timeout)
             pending[completed.key], count = nil, count - 1
             if completed.error then _G.error(completed.error, 0) end
             local rsp = self:_response(entry.api, completed.response, entry.generation)
-            if self.session and self.session.invalid(rsp.code) then
-                self.session:recover(self, entry.api:path())
-                if entry.api.retry_after_auth then rsp = self:_send(entry.api, timeout) end
-            end
-            check_response(entry.api, rsp)
+            rsp = self:_finish(entry.api, rsp, entry.revision, timeout)
             results[#results + 1] = rsp
         end
     end)

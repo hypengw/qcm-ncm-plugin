@@ -1,5 +1,6 @@
 local M = {retry_after_auth = true}
 M.__index = M
+local qcm = require('qcm.mod')
 
 function M.new()
     local self = setmetatable({}, M)
@@ -49,6 +50,10 @@ end
 ---@return NuserAccountRsp
 function M:parse_response(response)
     return response:json()
+end
+
+function M:auth_invalid(response)
+    return response.code == 200 and (response.profile == nil or response.profile == qcm.null)
 end
 
 return M

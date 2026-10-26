@@ -1,8 +1,10 @@
 package.path = 'src/?.lua;' .. package.path
 local now, sequence, saves, requests, responses, batches = 100000000, 0, 0, {}, {}, {}
+local events = {}
 local function raise(e) error(e, 0) end
 local qcm = {
-    inner = {}, time = {now = function() return now end},
+    inner = {}, time = {now = function() return now end}, null = {},
+    debug = function(event) events[#events + 1] = event end,
     error = raise, errors = {inspect = function(e) return type(e) == 'table' and e or nil end},
 }
 function qcm.inner:new_session_id() sequence = sequence + 1; return 'scope-' .. sequence end
@@ -56,7 +58,7 @@ local function api(retry)
     }
 end
 local function fresh(state)
-    requests, responses, batches, saves = {}, {}, {}, 0
+    requests, responses, batches, saves, events = {}, {}, {}, 0, {}
     local s = Session.new(); s:load(state, true)
     return s, Client.new('test', s)
 end
@@ -98,15 +100,15 @@ test('business failure still saves received token', function()
 end)
 test('successful refresh and latest response token', function()
     local s,c = fresh {refresh_token = 'before'}
-    responses = {response({code = 200}, 'after'),response({code = 200})}
+    responses = {response({code = 200}, 'after'),response({code = 200, profile = {userId = 7}}),response({code = 200})}
     local scope=s:scope();c:perform(api(),30)
-    assert(requests[1].url:match('/eapi/login/token/refresh$') and #requests == 2)
+    assert(requests[1].url:match('/eapi/login/token/refresh$') and #requests == 3)
     assert(s.state.refresh_time == now and s.state.refresh_token == 'after' and s:scope() == scope)
 end)
 test('refresh interval and clock rollback', function()
     local s,c = fresh {refresh_token = 'token', refresh_time = now}
     responses = {response({code = 200})}; c:perform(api(),30);assert(#requests == 1)
-    now = now - 1;responses = {response({code = 200}),response({code = 200})};c:perform(api(),30);assert(#requests == 3)
+    now = now - 1;responses = {response({code = 200}),response({code = 200,profile = {userId = 7}}),response({code = 200})};c:perform(api(),30);assert(#requests == 4)
 end)
 test('network failure backs off without changing refresh time', function()
     local s,c = fresh {refresh_token = 'token'}
@@ -185,9 +187,9 @@ test('anonymous sessions do not proactively refresh', function()
 end)
 test('batch performs due refresh before building API requests', function()
     local s,c=fresh {refresh_token='token'}
-    responses={response({code=200},'new'),response({code=200})}
+    responses={response({code=200},'new'),response({code=200,profile={userId=7}}),response({code=200})}
     local n=0;c:perform_queue(function() n=n+1;return n==1 and api(true) or nil end,30)
-    assert(requests[1].url:match('/login/token/refresh$') and requests[2].url:match('/test$'))
+    assert(requests[1].url:match('/login/token/refresh$') and requests[3].url:match('/test$'))
     assert(s.state.refresh_token=='new' and batches[1].closed)
 end)
 test('batch recovery rebuilds only the failed safe query', function()
@@ -218,5 +220,107 @@ test('refresh transport failures do not exhaust authentication recovery', functi
     responses={{failure={domain='http',code='transport'}},response({code=301}),response({code=200,data={action=1}}),response({code=200})}
     c:perform(api(true),30)
     assert(s.recovered and s.recovery_failures==0 and s.refresh_failures==4)
+end)
+test('unauthorized query forces refresh within the normal interval', function()
+    local s,c=fresh {refresh_token='before',refresh_time=now}
+    local scope=s:scope()
+    responses={response({code=301}),response({code=200},'after'),
+        response({code=200,profile={userId=7}}),response({code=200})}
+    c:perform(api(true),30)
+    assert(#requests==4 and requests[1].url:match('/test$') and requests[2].url:match('/login/token/refresh$'))
+    assert(requests[3].url:match('/nuser/account/get$') and requests[4].url:match('/test$'))
+    assert(s.state.refresh_token=='after' and s.revision==1 and s:scope()==scope)
+    assert(events[1].event=='refresh_verified' and events[1].forced)
+end)
+for _, profile in ipairs {'missing','null'} do
+    test('anonymous account response triggers refresh for ' .. profile .. ' profile', function()
+        local s,c=fresh {refresh_token='token',refresh_time=now}
+        responses={response({code=200,profile=profile=='null' and qcm.null or nil}),response({code=200}),
+            response({code=200,profile={userId=7}}),response({code=200,profile={userId=7}})}
+        local result=c:perform(require('api.nuser.account').new(),30)
+        assert(result.profile.userId==7 and #requests==4 and s.revision==1)
+    end)
+end
+test('refresh acknowledgement without an account does not advance the refresh time', function()
+    local last=now-1000
+    local s,c=fresh {refresh_token='token',refresh_time=last}
+    responses={response({code=301}),response({code=200}),response({code=200,profile=qcm.null}),
+        response({code=200,data={action=2}})}
+    fails(function() c:perform(api(true),30) end,'not_auth')
+    assert(#requests==4 and s.state.refresh_time==last and s.revision==0 and s.retry_at>now)
+    assert(events[1].event=='refresh_failed' and events[1].account_code==200)
+end)
+test('proactive refresh verifies the account before recording success', function()
+    local s,c=fresh {refresh_token='token'}
+    responses={response({code=200}),response({code=200}),
+        response({code=200,data={action=1}}),response({code=200})}
+    c:perform(api(true),30)
+    assert(#requests==4 and s.state.refresh_time==nil)
+end)
+test('failed forced refresh falls back to recovery with one read replay', function()
+    local last=now-1000
+    local s,c=fresh {refresh_token='token',refresh_time=last}
+    responses={response({code=301}),response({code=301}),
+        response({code=200,data={action=1}}),response({code=200})}
+    c:perform(api(true),30)
+    assert(#requests==4 and requests[3].url:match('/middle/account/token/refresh$'))
+    assert(s.state.refresh_time==last and s.refresh_failures==1)
+end)
+test('forced refresh respects transport backoff', function()
+    local s,c=fresh {refresh_token='token',refresh_time=now}
+    s.retry_at=now+300000
+    responses={response({code=301}),response({code=200,data={action=1}}),response({code=200})}
+    c:perform(api(true),30)
+    assert(#requests==3 and requests[2].url:match('/middle/account/token/refresh$'))
+end)
+test('forced refresh never replays a write', function()
+    local s,c=fresh {refresh_token='token',refresh_time=now}
+    responses={response({code=301}),response({code=200}),response({code=200,profile={userId=7}})}
+    fails(function() c:perform(api(false),30) end,'not_auth')
+    assert(#requests==3 and s.revision==1)
+    assert(events[2].event=='auth_rejected' and not events[2].retried)
+end)
+test('forced refresh stops after one unauthorized replay', function()
+    local s,c=fresh {refresh_token='token',refresh_time=now}
+    responses={response({code=301}),response({code=200}),
+        response({code=200,profile={userId=7}}),response({code=301})}
+    fails(function() c:perform(api(true),30) end,'not_auth')
+    assert(#requests==4 and events[2].event=='auth_rejected' and events[2].retried)
+end)
+test('a batch shares refreshed credentials across stale unauthorized replies', function()
+    local s,c=fresh {refresh_token='token',refresh_time=now}
+    responses={response({code=301}),response({code=301}),response({code=200}),
+        response({code=200,profile={userId=7}}),response({code=200}),response({code=200})}
+    local n=0
+    local results=c:perform_queue(function() n=n+1;return n<=2 and api(true) or nil end,30)
+    assert(#results==2 and #requests==6 and s.revision==1 and batches[1].closed)
+    local refreshes=0
+    for _,request in ipairs(requests) do
+        if request.url:match('/login/token/refresh$') then refreshes=refreshes+1 end
+    end
+    assert(refreshes==1)
+end)
+test('confirmed refresh rolls back its timestamp when persistence fails', function()
+    local last=now-86400000
+    local s,c=fresh {refresh_token='token',refresh_time=last}
+    local save=qcm.inner.save_session
+    local calls=0
+    qcm.inner.save_session=function(self)
+        calls=calls+1
+        if calls==3 then raise({code='storage_failure'}) end
+        return save(self)
+    end
+    responses={response({code=200}),response({code=200,profile={userId=7}})}
+    fails(function() c:perform(api(true),30) end,'storage_failure')
+    qcm.inner.save_session=save
+    assert(s.state.refresh_time==last and s.revision==0 and #requests==2)
+end)
+test('account changes during a refresh cannot back off the new session', function()
+    local s,c=fresh {refresh_token='token',refresh_time=now}
+    local changed=response({code=200})
+    changed.json=function() s:begin();return {code=200} end
+    responses={response({code=301}),changed}
+    fails(function() c:perform(api(true),30) end,'not_auth')
+    assert(s.retry_at==0 and s.force_at==0 and s.revision==0 and s.state.refresh_token==nil)
 end)
 print(passed .. ' session tests passed')
