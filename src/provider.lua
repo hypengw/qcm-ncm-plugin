@@ -67,6 +67,18 @@ function provider.share_url(native_id, item_type)
     return 'https://music.163.com/' .. path .. '?id=' .. id
 end
 
+function provider.comments(ctx, target, request)
+    return require('comments').list(client, target, request)
+end
+
+function provider.comment_replies(ctx, target, parent, request)
+    return require('comments').list(client, target, request, parent)
+end
+
+function provider.set_comment_like(ctx, target, comment_id, value)
+    return require('comments').like(client, target, comment_id, value)
+end
+
 function provider.check()
     if load_error then error(load_error, 0) end
     client:perform(require('api.nuser.account').new(), 30)
